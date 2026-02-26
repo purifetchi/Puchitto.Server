@@ -28,8 +28,9 @@ public struct HelloPacket(string branding, string gameRulesName) : IPuchittoPack
     }
 
     /// <inheritdoc />
-    public void Deserialize()
+    public void Deserialize(ref NetworkReader reader)
     {
-        throw new NotImplementedException();
+        Branding = reader.ReadString();
+        GameRulesName = reader.ReadString();
     }
 }

@@ -45,21 +45,19 @@ public class Client
     public async Task SendData<TPacket>(TPacket data)
         where TPacket : struct, IPuchittoPacket
     {
-        const int envelopeSize = sizeof(int) * 3;
-        
         // 10KiB by default.
         const int bufferSizeInBytes = 1024 * 10;
         
         var buffer = ArrayPool<byte>.Shared.Rent(bufferSizeInBytes);
 
         // Skip over the size of the envelope to save space for it.
-        var writer = new NetworkWriter(buffer, envelopeSize);
+        var writer = new NetworkWriter(buffer, PacketEnvelope.EnvelopeSize);
         data.Serialize(ref writer);
 
         var sequenceId = Interlocked.Increment(ref _lastSentSequenceId);
         var packetId = data.PacketId;
         var length = writer.Position;
-        var envelope = new PacketEnvelope(sequenceId, packetId, length - envelopeSize);
+        var envelope = new PacketEnvelope(sequenceId, packetId, length - PacketEnvelope.EnvelopeSize);
         
         var envelopeWriter = new NetworkWriter(buffer, 0);
         envelope.Serialize(ref envelopeWriter);

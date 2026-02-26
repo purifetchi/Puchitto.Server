@@ -7,5 +7,5 @@ public interface IPuchittoPacket
     int PacketId { get; }
     
     void Serialize(ref NetworkWriter writer);
-    void Deserialize();
+    void Deserialize(ref NetworkReader reader);
 }
