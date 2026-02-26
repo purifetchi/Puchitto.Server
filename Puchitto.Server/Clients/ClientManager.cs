@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using Puchitto.Server.Game;
+using Puchitto.Server.Packets.Engine;
 
 namespace Puchitto.Server.Clients;
 
@@ -13,6 +15,11 @@ public class ClientManager
     /// The logger for the 
     /// </summary>
     private readonly ILogger<ClientManager> _logger;
+
+    /// <summary>
+    /// The game server rules.
+    /// </summary>
+    private readonly IGameServerRules _gameServerRules;
     
     /// <summary>
     /// The client lock.
@@ -22,11 +29,17 @@ public class ClientManager
     /// <summary>
     /// Constructs a new client manager.
     /// </summary>
+    /// <param name="gameServerRules">
+    /// The game server rules.
+    /// </param>
     /// <param name="logger">
     /// The logger.
     /// </param>
-    public ClientManager(ILogger<ClientManager> logger)
+    public ClientManager(
+        IGameServerRules gameServerRules,
+        ILogger<ClientManager> logger)
     {
+        _gameServerRules = gameServerRules;
         _logger = logger;
     }
 
@@ -58,5 +71,8 @@ public class ClientManager
     private async Task SendHandshake(Client client)
     {
         _logger.LogInformation("Sending handshake to client of ID {Id}", client.Id);
+
+        var hello = new HelloPacket("Puchitto.Server", _gameServerRules.Name);
+        await client.SendData(hello);
     }
 }

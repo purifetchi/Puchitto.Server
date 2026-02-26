@@ -11,7 +11,7 @@ namespace Puchitto.Server.Management;
 /// </summary>
 /// <typeparam name="TGameServerRules">The type of the game server rules.</typeparam>
 public class PuchittoServer<TGameServerRules>
-    where TGameServerRules : IGameServerRules
+    where TGameServerRules : IGameServerRules, new()
 {
     /// <summary>
     /// The current config.
@@ -34,12 +34,18 @@ public class PuchittoServer<TGameServerRules>
     private readonly ClientManager _clientManager;
     
     /// <summary>
+    /// The game server rules.
+    /// </summary>
+    private readonly TGameServerRules _rules;
+    
+    /// <summary>
     /// Constructs a new Puchitto server.
     /// </summary>
     /// <param name="config">The server config.</param>
     public PuchittoServer(PuchittoServerConfig config)
     {
         _config = config;
+        _rules = new TGameServerRules();
 
         var loggingBuilder = config.LoggingBuilder ?? (opts =>
         {
@@ -54,6 +60,7 @@ public class PuchittoServer<TGameServerRules>
         );
 
         _clientManager = new ClientManager(
+            _rules,
             _loggerFactory.CreateLogger<ClientManager>()
         );
     }

@@ -2,5 +2,5 @@
 
 public interface IGameServerRules
 {
-    
+    public string Name { get; }
 }

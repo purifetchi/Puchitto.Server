@@ -5,6 +5,7 @@ namespace Puchitto.Server.Clients;
 public class ClientConnection
 {
     private readonly WebSocket _socket;
+    
     private readonly byte[] _readBuffer = new byte[1024 * 10];
 
     public ClientConnection(WebSocket socket)
@@ -22,8 +23,28 @@ public class ClientConnection
             {
                 continue;
             }
-
+            
             await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, stoppingToken);
         }
+    }
+
+    /// <summary>
+    /// Sends a given buffer.
+    /// </summary>
+    /// <param name="buffer">The buffer.</param>
+    /// <param name="stoppingToken">The cancellation token.</param>
+    public async Task SendBuffer(ArraySegment<byte> buffer, CancellationToken stoppingToken = default)
+    {
+        while (!stoppingToken.IsCancellationRequested && _socket.State != WebSocketState.Open)
+        {
+            await Task.Yield();
+        }
+        
+        await _socket.SendAsync(
+            buffer,
+            WebSocketMessageType.Binary,
+            WebSocketMessageFlags.EndOfMessage,
+            stoppingToken
+        );
     }
 }
