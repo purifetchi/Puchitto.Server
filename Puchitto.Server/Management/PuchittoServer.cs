@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Networking;
+using Puchitto.Server.Packets;
+using Puchitto.Server.Packets.Engine;
 
 namespace Puchitto.Server.Management;
 
@@ -32,6 +34,16 @@ public class PuchittoServer<TGameServerRules>
     /// The client manager.
     /// </summary>
     private readonly ClientManager _clientManager;
+
+    /// <summary>
+    /// The packet processor.
+    /// </summary>
+    private readonly PacketProcessor _packetProcessor;
+
+    /// <summary>
+    /// The packet registry.
+    /// </summary>
+    private readonly PacketRegistry _packetRegistry;
     
     /// <summary>
     /// The game server rules.
@@ -53,6 +65,9 @@ public class PuchittoServer<TGameServerRules>
         });
         
         _loggerFactory = LoggerFactory.Create(loggingBuilder);
+
+        _packetRegistry = new PacketRegistry();
+        _packetProcessor = new PacketProcessor(_packetRegistry);
         
         _webSocketListener = new WebSocketListener(
             _config.Prefixes,
@@ -61,8 +76,11 @@ public class PuchittoServer<TGameServerRules>
 
         _clientManager = new ClientManager(
             _rules,
+            _packetProcessor,
             _loggerFactory.CreateLogger<ClientManager>()
         );
+
+        RegisterInternalHandlers();
     }
     
     /// <summary>
@@ -74,5 +92,29 @@ public class PuchittoServer<TGameServerRules>
             connection => _clientManager.AcceptConnection(connection);
         
         await _webSocketListener.Listen();
+    }
+
+    /// <summary>
+    /// Registers the internal packet handlers.
+    /// </summary>
+    private void RegisterInternalHandlers()
+    {
+        _packetRegistry.RegisterHandler<JoinPacket>(OnJoin);
+    }
+
+    /// <summary>
+    /// Executed when the client sends us a join packet.
+    /// </summary>
+    /// <param name="packet">The packet.</param>
+    /// <param name="client">The client sending it.</param>
+    private async Task OnJoin(JoinPacket packet, Client client)
+    {
+        Console.WriteLine($"Client {client.Id} sent us a join packet!");
+        client.SetState(ClientState.Connecting);
+
+        await client.SendData(new LoadPacket
+        {
+            LevelName = "/game/cooked.alf"
+        });
     }
 }

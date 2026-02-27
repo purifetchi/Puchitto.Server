@@ -57,7 +57,10 @@ public class PacketProcessor
             await client.Disconnect();
             return;
         }
+        
+        Console.WriteLine($"Received a packet of type {envelope.SequenceNumber} {envelope.OpCode}, of length {envelope.Size}");
 
         var slice = data.Slice(PacketEnvelope.EnvelopeSize, envelope.Size);
+        await Registry.ExecuteHandler(envelope.OpCode, slice, client);
     }
 }

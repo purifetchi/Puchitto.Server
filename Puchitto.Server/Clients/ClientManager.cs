@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Puchitto.Server.Game;
+using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Engine;
 
 namespace Puchitto.Server.Clients;
@@ -17,6 +18,11 @@ public class ClientManager
     private readonly ILogger<ClientManager> _logger;
 
     /// <summary>
+    /// The packet processor.
+    /// </summary>
+    private readonly PacketProcessor _packetProcessor;
+    
+    /// <summary>
     /// The game server rules.
     /// </summary>
     private readonly IGameServerRules _gameServerRules;
@@ -32,14 +38,19 @@ public class ClientManager
     /// <param name="gameServerRules">
     /// The game server rules.
     /// </param>
+    /// <param name="packetProcessor">
+    /// The packet processor.
+    /// </param>
     /// <param name="logger">
     /// The logger.
     /// </param>
     public ClientManager(
         IGameServerRules gameServerRules,
+        PacketProcessor packetProcessor,
         ILogger<ClientManager> logger)
     {
         _gameServerRules = gameServerRules;
+        _packetProcessor = packetProcessor;
         _logger = logger;
     }
 
@@ -55,6 +66,9 @@ public class ClientManager
         {
             _clients.Add(client);
         }
+
+        client.Connection.OnIncomingMessage = async (data) =>
+            await _packetProcessor.ProcessIncomingPacket(client, data);
 
         _ = Task.Run(async () =>
         {

@@ -18,11 +18,21 @@ public class Client
     /// The connection for this client.
     /// </summary>
     public ClientConnection Connection { get; }
+
+    /// <summary>
+    /// The client state.
+    /// </summary>
+    public ClientState State => _state;
     
     /// <summary>
     /// The last sent sequence id.
     /// </summary>
     private int _lastSentSequenceId;
+
+    /// <summary>
+    /// The client state.
+    /// </summary>
+    private ClientState _state = ClientState.Established;
     
     public Client(
         Guid id,
@@ -65,6 +75,15 @@ public class Client
         await Connection.SendBuffer(new ArraySegment<byte>(buffer, 0, length));
         
         ArrayPool<byte>.Shared.Return(buffer);
+    }
+
+    /// <summary>
+    /// Sets the current client state.
+    /// </summary>
+    /// <param name="state">The state.</param>
+    public void SetState(ClientState state)
+    {
+        Interlocked.Exchange(ref _state, state);
     }
 
     public async Task Disconnect()

@@ -19,7 +19,7 @@ public struct HelloPacket(string branding, string gameRulesName) : IPuchittoPack
     /// The game rules name.
     /// </summary>
     private string GameRulesName { get; set; } = gameRulesName;
-
+    
     /// <inheritdoc />
     public void Serialize(ref NetworkWriter writer)
     {
