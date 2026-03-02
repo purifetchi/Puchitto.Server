@@ -38,7 +38,6 @@ public class Client
         Guid id,
         ClientConnection connection)
     {
-        Console.WriteLine($"Creating new client...");
         Id = id;
         Connection = connection;
     }
@@ -91,8 +90,11 @@ public class Client
         Interlocked.Exchange(ref _state, state);
     }
 
+    /// <summary>
+    /// Called when we want to disconnect a client.
+    /// </summary>
     public async Task Disconnect()
     {
-        
+        await Connection.Close();
     }
 }

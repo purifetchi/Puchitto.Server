@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
@@ -41,6 +40,8 @@ public class EntityManager
         ClientManager clientManager,
         ILogger<EntityManager> logger)
     {
+        clientManager.OnClientDisconnected += RemoveClientEntities;
+        
         _logger = logger;
         _clientManager = clientManager;
     }
@@ -132,6 +133,43 @@ public class EntityManager
         lock (_entityLock)
         {
             _entities.Remove(entity);
+        }
+    }
+
+    /// <summary>
+    /// Removes the entity and despawns it for other clients.
+    /// </summary>
+    /// <param name="entity">The entity.</param>
+    public async Task RemoveAndDespawn(BaseEntity entity)
+    {
+        RemoveEntity(entity);
+        
+        var packet = new RemoveEntityPacket
+        {
+            Id = entity.Id
+        };
+        
+        foreach (var client in _clientManager.Clients)
+        {
+            await client.SendData(packet);
+        }
+    }
+
+    /// <summary>
+    /// Removes all client-owned entities.
+    /// </summary>
+    /// <param name="client">The entities.</param>
+    private async Task RemoveClientEntities(Client client)
+    {
+        var entsToRemove = new List<BaseEntity>();
+        lock (_entities)
+        {
+            entsToRemove.AddRange(_entities.Where(entity => entity.Owner?.Id == client.Id));
+        }
+
+        foreach (var entity in entsToRemove)
+        {
+            await RemoveAndDespawn(entity);
         }
     }
 }

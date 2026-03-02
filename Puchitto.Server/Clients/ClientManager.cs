@@ -5,8 +5,31 @@ using Puchitto.Server.Packets.Engine.Clientbound;
 
 namespace Puchitto.Server.Clients;
 
+/// <summary>
+/// The base manager for clients.
+/// </summary>
 public class ClientManager
 {
+    /// <summary>
+    /// The delegate for when a client connects.
+    /// </summary>
+    public delegate Task ClientConnectedEvent(Client client);
+    
+    /// <summary>
+    /// The delegate for when a client disconnects.
+    /// </summary>
+    public delegate Task ClientDisconnectedEvent(Client client);
+    
+    /// <summary>
+    /// Invoked when a client connects.
+    /// </summary>
+    public event ClientConnectedEvent? OnClientConnected;
+    
+    /// <summary>
+    /// Invoked when a client disconnects.
+    /// </summary>
+    public event ClientDisconnectedEvent? OnClientDisconnected;
+    
     /// <summary>
     /// The list of present clients.
     /// </summary>
@@ -90,12 +113,15 @@ public class ClientManager
     /// Forget about the client.
     /// </summary>
     /// <param name="client">The client.</param>
-    public async Task DisconnectClient(Client client)
+    private async Task DisconnectClient(Client client)
     {
         _logger.LogInformation("Disconnecting client {Id}", client.Id);
         
         client.SetState(ClientState.Disconnected);
-        // TODO: Remove client-owned entities.
+        if (OnClientDisconnected is not null)
+        {
+            await OnClientDisconnected.Invoke(client);
+        }
 
         lock (_clientLock)
         {

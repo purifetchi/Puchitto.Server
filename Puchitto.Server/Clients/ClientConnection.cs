@@ -102,4 +102,12 @@ public class ClientConnection
             stoppingToken
         );
     }
+
+    /// <summary>
+    /// Closes the connection.
+    /// </summary>
+    public async Task Close()
+    {
+        await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+    }
 }
