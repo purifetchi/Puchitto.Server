@@ -7,7 +7,12 @@ public class ClientConnection
     /// <summary>
     /// Called when we have an incoming message.
     /// </summary>
-    public Func<ArraySegment<byte>, Task>? OnIncomingMessage { get; set; }    
+    public Func<ArraySegment<byte>, Task>? OnIncomingMessage { get; set; } 
+    
+    /// <summary>
+    /// Called when the connection is closed.
+    /// </summary>
+    public Func<Task>? OnConnectionClosed { get; set; } 
     
     /// <summary>
     /// The socket this client connection is using.
@@ -64,6 +69,11 @@ public class ClientConnection
                 await OnIncomingMessage(segment);
             }
         }
+        
+        if (OnConnectionClosed != null)
+        {
+            await OnConnectionClosed();
+        }
     }
 
     /// <summary>
@@ -73,6 +83,13 @@ public class ClientConnection
     /// <param name="stoppingToken">The cancellation token.</param>
     public async Task SendBuffer(ArraySegment<byte> buffer, CancellationToken stoppingToken = default)
     {
+        if (_socket.State is WebSocketState.Closed 
+            or WebSocketState.CloseReceived
+            or WebSocketState.CloseSent)
+        {
+            return;
+        }
+        
         while (!stoppingToken.IsCancellationRequested && _socket.State != WebSocketState.Open)
         {
             await Task.Yield();

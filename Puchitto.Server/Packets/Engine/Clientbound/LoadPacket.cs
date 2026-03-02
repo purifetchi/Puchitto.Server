@@ -1,6 +1,6 @@
 using Puchitto.Server.Packets.Serialization;
 
-namespace Puchitto.Server.Packets.Engine;
+namespace Puchitto.Server.Packets.Engine.Clientbound;
 
 public struct LoadPacket : IPuchittoPacket
 {

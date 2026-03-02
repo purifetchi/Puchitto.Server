@@ -1,6 +1,6 @@
 using Puchitto.Server.Packets.Serialization;
 
-namespace Puchitto.Server.Packets.Engine;
+namespace Puchitto.Server.Packets.Engine.Serverbound;
 
 /// <summary>
 /// The join packet sent by the client.

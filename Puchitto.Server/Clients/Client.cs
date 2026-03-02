@@ -55,6 +55,11 @@ public class Client
     public async Task SendData<TPacket>(TPacket data)
         where TPacket : struct, IPuchittoPacket
     {
+        if (State == ClientState.Disconnected)
+        {
+            return;
+        }
+        
         // 10KiB by default.
         const int bufferSizeInBytes = 1024 * 10;
         

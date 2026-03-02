@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 
 namespace Puchitto.Server.Packets.Serialization;
@@ -38,6 +39,43 @@ public ref struct NetworkReader
         
         _offset += 4;
         return value;
+    }
+
+    /// <summary>
+    /// Reads a 32-bit floating-point number.
+    /// </summary>
+    /// <returns>The 32-bit floating-point number.</returns>
+    public float ReadFloat()
+    {
+        var bits = ReadInt32();
+        return BitConverter.Int32BitsToSingle(bits);
+    }
+    
+    /// <summary>
+    /// Reads a Vector3.
+    /// </summary>
+    /// <returns>The vector.</returns>
+    public Vector3 ReadVector3()
+    {
+        var x = ReadFloat();
+        var y = ReadFloat();
+        var z = ReadFloat();
+        
+        return new Vector3(x, y, z);
+    }
+
+    /// <summary>
+    /// Reads a Quaternion.
+    /// </summary>
+    /// <returns>The quaternion.</returns>
+    public Quaternion ReadQuaternion()
+    {
+        var x = ReadFloat();
+        var y = ReadFloat();
+        var z = ReadFloat();
+        var w = ReadFloat();
+        
+        return new Quaternion(x, y, z, w);
     }
 
     /// <summary>

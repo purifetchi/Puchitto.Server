@@ -1,3 +1,5 @@
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Puchitto.Server.Packets.Serialization;
@@ -37,12 +39,46 @@ public ref struct NetworkWriter
     /// Writes a 32-bit signed integer.
     /// </summary>
     /// <param name="value">The value.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteInt32(int value)
     {
         _writeBuffer[_offset++] = (byte)value;
         _writeBuffer[_offset++] = (byte)(value >> 8);
         _writeBuffer[_offset++] = (byte)(value >> 16);
         _writeBuffer[_offset++] = (byte)(value >> 24);
+    }
+    
+    /// <summary>
+    /// Writes a 32-bit floating-point number.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    public void WriteFloat(float value)
+    {
+        var bits = BitConverter.SingleToInt32Bits(value);
+        WriteInt32(bits);
+    }
+
+    /// <summary>
+    /// Writes a Vector3.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    public void WriteVector3(Vector3 value)
+    {
+        WriteFloat(value.X);
+        WriteFloat(value.Y);
+        WriteFloat(value.Z);
+    }
+
+    /// <summary>
+    /// Writes a Quaternion.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    public void WriteQuaternion(Quaternion value)
+    {
+        WriteFloat(value.X);
+        WriteFloat(value.Y);
+        WriteFloat(value.Z);
+        WriteFloat(value.W);
     }
     
     /// <summary>
@@ -72,11 +108,9 @@ public ref struct NetworkWriter
         var length = Encoding.UTF8.GetByteCount(value);
         WriteInt32(length);
         
-        // TODO: Not performant!
-        var bytes = Encoding.UTF8.GetBytes(value);
-        foreach (var b in bytes)
-        {
-            WriteByte(b);
-        }
+        var slice = _writeBuffer.Slice(_offset, length);
+        Encoding.UTF8.GetBytes(value, slice);
+        
+        _offset += length;
     }
 }

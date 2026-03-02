@@ -28,5 +28,10 @@ public enum ClientState
     /// <summary>
     /// The client is present in the world.
     /// </summary>
-    Present
+    Present,
+    
+    /// <summary>
+    /// The client is disconnected.
+    /// </summary>
+    Disconnected
 }

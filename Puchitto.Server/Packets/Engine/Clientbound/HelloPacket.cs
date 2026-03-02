@@ -1,6 +1,6 @@
 using Puchitto.Server.Packets.Serialization;
 
-namespace Puchitto.Server.Packets.Engine;
+namespace Puchitto.Server.Packets.Engine.Clientbound;
 
 /// <summary>
 /// A Puchitto hello packet.

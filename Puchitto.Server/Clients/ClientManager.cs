@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Puchitto.Server.Game;
 using Puchitto.Server.Packets;
-using Puchitto.Server.Packets.Engine;
+using Puchitto.Server.Packets.Engine.Clientbound;
 
 namespace Puchitto.Server.Clients;
 
@@ -31,6 +31,11 @@ public class ClientManager
     /// The client lock.
     /// </summary>
     private readonly Lock _clientLock = new(); 
+    
+    /// <summary>
+    /// Gets all the clients.
+    /// </summary>
+    public IReadOnlyList<Client> Clients => _clients;
 
     /// <summary>
     /// Constructs a new client manager.
@@ -70,6 +75,9 @@ public class ClientManager
         client.Connection.OnIncomingMessage = async (data) =>
             await _packetProcessor.ProcessIncomingPacket(client, data);
 
+        client.Connection.OnConnectionClosed = async () =>
+            await DisconnectClient(client);
+        
         _ = Task.Run(async () =>
         {
             await client.Connection.PumpMessages(CancellationToken.None);
@@ -78,6 +86,23 @@ public class ClientManager
         await SendHandshake(client);
     }
 
+    /// <summary>
+    /// Forget about the client.
+    /// </summary>
+    /// <param name="client">The client.</param>
+    public async Task DisconnectClient(Client client)
+    {
+        _logger.LogInformation("Disconnecting client {Id}", client.Id);
+        
+        client.SetState(ClientState.Disconnected);
+        // TODO: Remove client-owned entities.
+
+        lock (_clientLock)
+        {
+            _clients.Remove(client);
+        }
+    }
+    
     /// <summary>
     /// Sends the handshake to the client.
     /// </summary>
