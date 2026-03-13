@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Packets;
+using Puchitto.Server.Realms;
 
 namespace Puchitto.Server.Management;
 
@@ -10,9 +12,9 @@ namespace Puchitto.Server.Management;
 public interface IPuchittoSystemsProvider
 {
     /// <summary>
-    /// The entity manager.
+    /// The realm.
     /// </summary>
-    EntityManager EntityManager { get; }
+    Realm Realm { get; }
     
     /// <summary>
     /// The client manager.
@@ -23,4 +25,11 @@ public interface IPuchittoSystemsProvider
     /// The packet registry.
     /// </summary>
     PacketRegistry Registry { get; }
+
+    /// <summary>
+    /// Constructs a logger for a given type.
+    /// </summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <returns>The created logger.</returns>
+    ILogger<T> MakeLogger<T>();
 }

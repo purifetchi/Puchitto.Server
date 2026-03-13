@@ -21,6 +21,7 @@ public class SampleGameServerRules : IGameServerRules
     {
         // Find the entity for this player.
         var entity = PuchittoSystemsProvider
+            .Realm
             .EntityManager
             .Entities
             .FirstOrDefault(ent => ent.Owner?.Id == client.Id && ent is AtaEntity);

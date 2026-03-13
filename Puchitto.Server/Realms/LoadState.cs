@@ -1,4 +1,4 @@
-namespace Puchitto.Server.Level;
+namespace Puchitto.Server.Realms;
 
 public enum LoadState
 {

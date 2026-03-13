@@ -2,11 +2,11 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
-using Puchitto.Server.Level;
 using Puchitto.Server.Networking;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Engine.Clientbound;
 using Puchitto.Server.Packets.Engine.Serverbound;
+using Puchitto.Server.Realms;
 using Puchitto.Server.Scripting;
 
 namespace Puchitto.Server.Management;
@@ -21,7 +21,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// <summary>
     /// The entity manager.
     /// </summary>
-    public EntityManager EntityManager { get; }
+    public Realm Realm { get; }
 
     /// <summary>
     /// The client manager.
@@ -103,10 +103,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             _loggerFactory.CreateLogger<ClientManager>()
         );
 
-        EntityManager = new EntityManager(
-            ClientManager,
-            _loggerFactory.CreateLogger<EntityManager>()
-        );
+        Realm = new Realm(this);
 
         RegisterInternalHandlers();
         SetupMiniAnticsEnvironment();
@@ -164,15 +161,16 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         client.SetState(newState);
         _logger.LogInformation("Client {ClientName} is now in state {State}", client.Id, newState);
         
-        // TODO: Move this to a more sensible location.
         if (newState == ClientState.Loaded)
         {
-            await EntityManager.SpawnMissingEntitiesFor(client);
-            
-            var entity = _rules.CreateEntityForClient();
-            entity.Owner = client;
-            await EntityManager.AddAndSpawnForEveryone(entity);    
+            await Realm.SpawnPlayer(client, _rules);
         }
+    }
+    
+    /// <inheritdoc />
+    public ILogger<T> MakeLogger<T>()
+    {
+        return _loggerFactory.CreateLogger<T>();
     }
 
     /// <summary>
