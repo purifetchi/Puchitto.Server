@@ -7,6 +7,7 @@ using Puchitto.Server.Networking;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Engine.Clientbound;
 using Puchitto.Server.Packets.Engine.Serverbound;
+using Puchitto.Server.Scripting;
 
 namespace Puchitto.Server.Management;
 
@@ -61,6 +62,11 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// The game server rules.
     /// </summary>
     private readonly TGameServerRules _rules;
+
+    /// <summary>
+    /// The base miniantics environment.
+    /// </summary>
+    private readonly MiniAnticsEnvironment _miniAnticsEnvironment;
     
     /// <summary>
     /// Constructs a new Puchitto server.
@@ -69,6 +75,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     public PuchittoServer(PuchittoServerConfig config)
     {
         _config = config;
+        _miniAnticsEnvironment = new();
         _rules = new TGameServerRules
         {
             PuchittoSystemsProvider = this
@@ -102,6 +109,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         );
 
         RegisterInternalHandlers();
+        SetupMiniAnticsEnvironment();
     }
     
     /// <summary>
@@ -165,5 +173,38 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             entity.Owner = client;
             await EntityManager.AddAndSpawnForEveryone(entity);    
         }
+    }
+
+    /// <summary>
+    /// Constructs a new child environment.
+    /// </summary>
+    /// <returns>The child MiniAntics environment.</returns>
+    public MiniAnticsEnvironment MakeChildEnvironment()
+    {
+        return new MiniAnticsEnvironment(_miniAnticsEnvironment);
+    }
+
+    /// <summary>
+    /// Sets up the base MiniAntics environment.
+    /// </summary>
+    private void SetupMiniAnticsEnvironment()
+    {
+        _miniAnticsEnvironment.Set("+", (float a, float b) => a + b);
+        _miniAnticsEnvironment.Set("-", (float a, float b) => a - b);
+        _miniAnticsEnvironment.Set("/", (float a, float b) => a / b);
+        _miniAnticsEnvironment.Set("*", (float a, float b) => a * b);
+
+        _miniAnticsEnvironment.Set("not", (bool value) => !value);
+        _miniAnticsEnvironment.Set("null?", (object? value) => value is null);
+        _miniAnticsEnvironment.Set("equal?", (object a, object b) => a.Equals(b));
+        _miniAnticsEnvironment.Set("different?", (object a, object b) => !a.Equals(b));
+        
+        _miniAnticsEnvironment.Set("print", (object value) =>
+        {
+            _logger.LogInformation($"[MiniAntics] {value}");
+        });
+        
+        _miniAnticsEnvironment.Set("pass", () => { });
+        _miniAnticsEnvironment.Set("progn", (params object[]? values) => values is { Length: > 0 } ? values[^1] : null);
     }
 }

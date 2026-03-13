@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Puchitto.Server.Management;
 using Puchitto.Server.Sample;
-using Puchitto.Server.Scripting;
 
 var config = new PuchittoServerConfig
 {
