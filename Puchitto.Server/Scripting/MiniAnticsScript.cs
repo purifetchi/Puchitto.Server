@@ -40,7 +40,7 @@ public class MiniAnticsScript
     {
         if (tokens.Count < 1)
         {
-            throw new Exception("Empty MiniAntics script!"); // TODO
+            return Nothing.Default;
         }
 
         var token = tokens.Dequeue();

@@ -61,7 +61,6 @@ public class Client
         
         // 10KiB by default.
         const int bufferSizeInBytes = 1024 * 10;
-        
         var buffer = ArrayPool<byte>.Shared.Rent(bufferSizeInBytes);
 
         // Skip over the size of the envelope to save space for it.
