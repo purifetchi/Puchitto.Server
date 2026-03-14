@@ -2,8 +2,11 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
+using Puchitto.Server.Game.Entities;
+using Puchitto.Server.Game.Entities.Scripting;
 using Puchitto.Server.Networking;
 using Puchitto.Server.Packets;
+using Puchitto.Server.Packets.Engine.Bidirectional;
 using Puchitto.Server.Packets.Engine.Clientbound;
 using Puchitto.Server.Packets.Engine.Serverbound;
 using Puchitto.Server.Realms;
@@ -87,20 +90,23 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         });
         
         _loggerFactory = LoggerFactory.Create(loggingBuilder);
-        _logger = _loggerFactory.CreateLogger<PuchittoServer<TGameServerRules>>();
+        _logger = MakeLogger<PuchittoServer<TGameServerRules>>();
 
         Registry = new PacketRegistry();
-        _packetProcessor = new PacketProcessor(Registry);
+        _packetProcessor = new PacketProcessor(
+            Registry,
+            MakeLogger<PacketProcessor>()
+        );
         
         _webSocketListener = new WebSocketListener(
             _config.Prefixes,
-            _loggerFactory.CreateLogger<WebSocketListener>()
+            MakeLogger<WebSocketListener>()
         );
 
         ClientManager = new ClientManager(
             _rules,
             _packetProcessor,
-            _loggerFactory.CreateLogger<ClientManager>()
+            MakeLogger<ClientManager>()
         );
 
         Realm = new Realm(this);
@@ -129,8 +135,9 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         
         Registry.RegisterHandler<JoinPacket>(OnJoin);
         Registry.RegisterHandler<LoadStatePacket>(OnLoadState);
+        Registry.RegisterHandler<MiniAnticsRpcPacket>(OnMiniAnticsRpc);
     }
-
+    
     /// <summary>
     /// Executed when the client sends us a join packet.
     /// </summary>
@@ -165,6 +172,27 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         {
             await Realm.SpawnPlayer(client, _rules);
         }
+    }
+    
+    /// <summary>
+    /// Executed when a client invokes a MiniAntics rpc.
+    /// </summary>
+    /// <param name="packet">The packet.</param>
+    /// <param name="client">The client sending it.</param>
+    private async Task OnMiniAnticsRpc(MiniAnticsRpcPacket packet, Client client)
+    {
+        _logger.LogInformation("Object {Id} just got a MiniAntics RPC {Name} from client {Client}",
+            packet.ObjectId,
+            packet.Name,
+            client.Id);
+        
+        // Find the object
+        // TODO: Make this client realm aware once we implement multi-realm simulations.
+        var entity = Realm
+            .EntityManager
+            .GetEntity<BaseEntity>(packet.ObjectId);
+        
+        entity?.RunAntics(AnticsOn.Rpc, packet.Name);
     }
     
     /// <inheritdoc />

@@ -59,6 +59,21 @@ public class EntityManager
     }
 
     /// <summary>
+    /// Gets an entity.
+    /// </summary>
+    /// <param name="id">The ID of the entity.</param>
+    /// <typeparam name="TEntity">The type of the entity.</typeparam>
+    /// <returns>The entity if it is found.</returns>
+    public TEntity? GetEntity<TEntity>(string id)
+        where TEntity : BaseEntity
+    {
+        lock (_entityLock)
+        {
+            return _entities.FirstOrDefault(e => e.Id == id) as TEntity;
+        }
+    }
+
+    /// <summary>
     /// Adds an entity and spawns it for all clients.
     /// </summary>
     /// <param name="entity">The entity.</param>

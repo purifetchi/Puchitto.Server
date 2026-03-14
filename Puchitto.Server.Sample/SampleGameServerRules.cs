@@ -58,7 +58,7 @@ public class SampleGameServerRules : IGameServerRules
 
     public BaseEntity CreateEntityForClient()
     {
-        return new AtaEntity
+        return new AtaEntity(PuchittoSystemsProvider)
         {
             Id = Guid.NewGuid().ToString()
         };

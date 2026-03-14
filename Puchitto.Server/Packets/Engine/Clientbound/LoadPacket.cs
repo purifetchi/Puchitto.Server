@@ -4,8 +4,8 @@ namespace Puchitto.Server.Packets.Engine.Clientbound;
 
 public struct LoadPacket : IPuchittoPacket
 {
-    public int PacketId { get; } = 3;
-    
+    public int PacketId => (int)InternalPacketTypes.Load;
+
     public string LevelName { get; set; }
 
     public LoadPacket()

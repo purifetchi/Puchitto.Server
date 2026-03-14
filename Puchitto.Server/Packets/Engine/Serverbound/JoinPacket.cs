@@ -7,8 +7,8 @@ namespace Puchitto.Server.Packets.Engine.Serverbound;
 /// </summary>
 public struct JoinPacket : IPuchittoPacket
 {
-    public int PacketId { get; } = 2;
- 
+    public int PacketId => (int)InternalPacketTypes.Join;
+
     public JoinPacket()
     {
     }

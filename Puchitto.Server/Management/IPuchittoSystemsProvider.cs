@@ -3,6 +3,7 @@ using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Realms;
+using Puchitto.Server.Scripting;
 
 namespace Puchitto.Server.Management;
 
@@ -32,4 +33,10 @@ public interface IPuchittoSystemsProvider
     /// <typeparam name="T">The type.</typeparam>
     /// <returns>The created logger.</returns>
     ILogger<T> MakeLogger<T>();
+
+    /// <summary>
+    /// Makes the child environment from the base environment.
+    /// </summary>
+    /// <returns>The child environment.</returns>
+    MiniAnticsEnvironment MakeChildEnvironment();
 }

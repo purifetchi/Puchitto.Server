@@ -5,8 +5,8 @@ namespace Puchitto.Server.Packets.Engine.Serverbound;
 
 public struct LoadStatePacket() : IPuchittoPacket
 {
-    public int PacketId { get; } = 4;
-    
+    public int PacketId => (int)InternalPacketTypes.LoadStateUpdate;
+
     public LoadState State { get; set; } = LoadState.Started;
 
     public void Serialize(ref NetworkWriter writer)

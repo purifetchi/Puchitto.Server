@@ -7,7 +7,7 @@ namespace Puchitto.Server.Packets.Engine.Clientbound;
 /// </summary>
 public struct RemoveEntityPacket() : IPuchittoPacket
 {
-    public int PacketId { get; } = 6;
+    public int PacketId => (int)InternalPacketTypes.RemoveEntity;
 
     /// <summary>
     /// The ID of the entity.

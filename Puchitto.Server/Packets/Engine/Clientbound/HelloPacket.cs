@@ -8,7 +8,7 @@ namespace Puchitto.Server.Packets.Engine.Clientbound;
 public struct HelloPacket(string branding, string gameRulesName) : IPuchittoPacket
 {
     /// <inheritdoc />
-    public int PacketId { get; } = 1;
+    public int PacketId => (int)InternalPacketTypes.Hello;
 
     /// <summary>
     /// The identification message.

@@ -95,7 +95,7 @@ public ref struct NetworkReader
     {
         return _reader[_offset++] != 0;
     }
-
+    
     /// <summary>
     /// Reads a string.
     /// </summary>

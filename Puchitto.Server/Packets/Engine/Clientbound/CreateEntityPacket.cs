@@ -5,7 +5,7 @@ namespace Puchitto.Server.Packets.Engine.Clientbound;
 
 public struct CreateEntityPacket() : IPuchittoPacket
 {
-    public int PacketId { get; } = 5;
+    public int PacketId => (int)InternalPacketTypes.CreateEntity;
 
     /// <summary>
     /// The ID of the entity.

@@ -1,0 +1,43 @@
+using Puchitto.Server.Packets.Serialization;
+
+namespace Puchitto.Server.Packets.Engine.Bidirectional;
+
+/// <summary>
+/// A MiniAntics RPC call.
+/// </summary>
+public struct MiniAnticsRpcPacket : IPuchittoPacket
+{
+    /// <inheritdoc />
+    public int PacketId => (int)InternalPacketTypes.MiniAnticsRpc;
+    
+    /// <summary>
+    /// The ID of the object where the MiniAntics RPC is being invoked.
+    /// </summary>
+    public string ObjectId { get; set; }
+    
+    /// <summary>
+    /// The name of the RPC.
+    /// </summary>
+    public string Name { get; set; }
+    
+    /// <summary>
+    /// The payload of the call.
+    /// </summary>
+    public ArraySegment<byte> Payload { get; set; }
+    
+    /// <inheritdoc />
+    public void Serialize(ref NetworkWriter writer)
+    {
+        writer.WriteString(ObjectId);
+        writer.WriteString(Name);
+        // TODO: Payload
+    }
+
+    /// <inheritdoc />
+    public void Deserialize(ref NetworkReader reader)
+    {
+        ObjectId = reader.ReadString();
+        Name = reader.ReadString();
+        // TODO: Payload
+    }
+}

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Packets.Serialization;
 
@@ -14,12 +15,21 @@ public class PacketProcessor
     public PacketRegistry Registry { get;  }
 
     /// <summary>
+    /// The logger.
+    /// </summary>
+    private readonly ILogger<PacketProcessor> _logger;
+
+    /// <summary>
     /// Constructs a new packet processor.
     /// </summary>
     /// <param name="registry">The associated registry.</param>
-    public PacketProcessor(PacketRegistry registry)
+    /// <param name="logger">The logger.</param>
+    public PacketProcessor(
+        PacketRegistry registry,
+        ILogger<PacketProcessor> logger)
     {
         Registry = registry;
+        _logger = logger;
     }
     
     /// <summary>
@@ -41,6 +51,9 @@ public class PacketProcessor
         {
             // TODO: Reason.
             await client.Disconnect();
+            _logger.LogError("Client {Id} sent us a packet with an invalid size! (Size was {Size})",
+                client.Id,
+                envelope.Size);
             return;
         }
 
@@ -48,6 +61,9 @@ public class PacketProcessor
         if (envelope.SequenceNumber < 0)
         {
             await client.Disconnect();
+            _logger.LogError("Client {Id} sent us a packet with an invalid sequence number! (Sequence was {Seq})",
+                client.Id,
+                envelope.SequenceNumber);
             return;
         }
 
@@ -55,11 +71,12 @@ public class PacketProcessor
         if (!Registry.PacketExists(envelope.OpCode))
         {
             await client.Disconnect();
+            _logger.LogError("Client {Id} sent us a packet for which we have no handler! (OpCode was {Op})",
+                client.Id,
+                envelope.OpCode);
             return;
         }
         
-        Console.WriteLine($"Received a packet of type {envelope.SequenceNumber} {envelope.OpCode}, of length {envelope.Size}");
-
         var slice = data.Slice(PacketEnvelope.EnvelopeSize, envelope.Size);
         await Registry.ExecuteHandler(envelope.OpCode, slice, client);
     }
