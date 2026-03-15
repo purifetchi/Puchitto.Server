@@ -64,7 +64,7 @@ public class EntityManager
     /// <param name="id">The ID of the entity.</param>
     /// <typeparam name="TEntity">The type of the entity.</typeparam>
     /// <returns>The entity if it is found.</returns>
-    public TEntity? GetEntity<TEntity>(string id)
+    public TEntity? GetEntityById<TEntity>(int id)
         where TEntity : BaseEntity
     {
         lock (_entityLock)

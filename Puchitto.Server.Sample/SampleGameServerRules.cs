@@ -60,7 +60,7 @@ public class SampleGameServerRules : IGameServerRules
     {
         return new AtaEntity(PuchittoSystemsProvider)
         {
-            Id = Guid.NewGuid().ToString()
+            Id = PuchittoSystemsProvider.Realm.IdAllocator.GetNextId()
         };
     }
 }

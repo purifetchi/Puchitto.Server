@@ -12,11 +12,11 @@ public struct RemoveEntityPacket() : IPuchittoPacket
     /// <summary>
     /// The ID of the entity.
     /// </summary>
-    public string Id { get; set; } = string.Empty;
+    public int Id { get; set; }
     
     public void Serialize(ref NetworkWriter writer)
     {
-        writer.WriteString(Id);
+        writer.WriteInt32(Id);
     }
 
     public void Deserialize(ref NetworkReader reader)

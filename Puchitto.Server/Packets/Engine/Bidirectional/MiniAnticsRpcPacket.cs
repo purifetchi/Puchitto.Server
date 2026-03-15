@@ -13,7 +13,7 @@ public struct MiniAnticsRpcPacket : IPuchittoPacket
     /// <summary>
     /// The ID of the object where the MiniAntics RPC is being invoked.
     /// </summary>
-    public string ObjectId { get; set; }
+    public int ObjectId { get; set; }
     
     /// <summary>
     /// The name of the RPC.
@@ -28,7 +28,7 @@ public struct MiniAnticsRpcPacket : IPuchittoPacket
     /// <inheritdoc />
     public void Serialize(ref NetworkWriter writer)
     {
-        writer.WriteString(ObjectId);
+        writer.WriteInt32(ObjectId);
         writer.WriteString(Name);
         // TODO: Payload
     }
@@ -36,7 +36,7 @@ public struct MiniAnticsRpcPacket : IPuchittoPacket
     /// <inheritdoc />
     public void Deserialize(ref NetworkReader reader)
     {
-        ObjectId = reader.ReadString();
+        ObjectId = reader.ReadInt32();
         Name = reader.ReadString();
         // TODO: Payload
     }

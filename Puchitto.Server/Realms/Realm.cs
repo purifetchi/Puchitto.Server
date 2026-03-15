@@ -1,5 +1,6 @@
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
+using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
 
 namespace Puchitto.Server.Realms;
@@ -13,6 +14,11 @@ public class Realm
     /// The entity manager for this realm.
     /// </summary>
     public EntityManager EntityManager { get; }
+    
+    /// <summary>
+    /// The ID allocator for this realm.
+    /// </summary>
+    public EntityIdAllocator IdAllocator { get; }
 
     /// <summary>
     /// Constructs a new Realm.
@@ -26,6 +32,8 @@ public class Realm
         EntityManager = new EntityManager(
             puchittoSystemsProvider.ClientManager,
             puchittoSystemsProvider.MakeLogger<EntityManager>());
+
+        IdAllocator = new EntityIdAllocator(100); // TODO: This should be filled out with the last authored ID from the realm. For testing purposes let's start from 100.
     }
 
     /// <summary>

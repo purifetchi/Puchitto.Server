@@ -8,13 +8,13 @@ public struct MoveAtaPacket() : IPuchittoPacket
 {
     public int PacketId { get; } = 101;
 
-    public string Id { get; set; }
+    public int Id { get; set; }
     
     public Vector3 To { get; set; }
     
     public void Serialize(ref NetworkWriter writer)
     {
-        writer.WriteString(Id);
+        writer.WriteInt32(Id);
         writer.WriteVector3(To);
     }
 

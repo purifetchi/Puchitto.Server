@@ -190,7 +190,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         // TODO: Make this client realm aware once we implement multi-realm simulations.
         var entity = Realm
             .EntityManager
-            .GetEntity<BaseEntity>(packet.ObjectId);
+            .GetEntityById<BaseEntity>(packet.ObjectId);
         
         entity?.RunAntics(AnticsOn.Rpc, packet.Name);
     }

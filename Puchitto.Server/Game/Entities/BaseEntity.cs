@@ -18,7 +18,12 @@ public abstract class BaseEntity
     /// <summary>
     /// The ID of the entity.
     /// </summary>
-    public string Id { get; set; } = null!;
+    public required int Id { get; set; }
+    
+    /// <summary>
+    /// The name of the entity.
+    /// </summary>
+    public string? Name { get; set; }
     
     /// <summary>
     /// Is the current entity authored by the level?
