@@ -2,6 +2,7 @@ using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
+using Puchitto.Server.Realms.Definitions;
 
 namespace Puchitto.Server.Realms;
 
@@ -10,6 +11,11 @@ namespace Puchitto.Server.Realms;
 /// </summary>
 public class Realm
 {
+    /// <summary>
+    /// Is this realm the default realm for loading?
+    /// </summary>
+    public bool IsDefault { get; private set; }
+    
     /// <summary>
     /// The entity manager for this realm.
     /// </summary>
@@ -21,21 +27,49 @@ public class Realm
     public EntityIdAllocator IdAllocator { get; }
 
     /// <summary>
+    /// The puchitto systems provider.
+    /// </summary>
+    private IPuchittoSystemsProvider _systemsProvider;
+
+    /// <summary>
     /// Constructs a new Realm.
     /// </summary>
     /// <param name="puchittoSystemsProvider">
     /// The systems provider.
     /// </param>
     public Realm(
-        IPuchittoSystemsProvider puchittoSystemsProvider)
+        IPuchittoSystemsProvider puchittoSystemsProvider,
+        Level levelDefinition,
+        bool isDefault = false)
     {
+        _systemsProvider = puchittoSystemsProvider;
+        IsDefault = isDefault;
         EntityManager = new EntityManager(
             puchittoSystemsProvider.ClientManager,
             puchittoSystemsProvider.MakeLogger<EntityManager>());
 
-        IdAllocator = new EntityIdAllocator(100); // TODO: This should be filled out with the last authored ID from the realm. For testing purposes let's start from 100.
+        ParseEntities(levelDefinition);
+        
+        var maxId = EntityManager.Entities.Max(e => e.Id);
+        IdAllocator = new EntityIdAllocator(maxId + 1);
     }
 
+    /// <summary>
+    /// Parses the entities within this realm.
+    /// </summary>
+    private void ParseEntities(Level levelDefinition)
+    {
+        foreach (var entityDefinition in levelDefinition.Entities)
+        {
+            var ent = new UnknownEntity(entityDefinition, _systemsProvider)
+            {
+                Id = entityDefinition.Id
+            };
+            
+            EntityManager.AddEntity(ent);
+        }
+    }
+    
     /// <summary>
     /// Spawns a player given the rules.
     /// </summary>

@@ -1,6 +1,7 @@
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game.Entities.Scripting;
 using Puchitto.Server.Management;
+using Puchitto.Server.Realms.Definitions;
 using Puchitto.Server.Scripting;
 
 namespace Puchitto.Server.Game.Entities;
@@ -43,12 +44,12 @@ public abstract class BaseEntity
     /// <summary>
     /// The MiniAntics environment.
     /// </summary>
-    private MiniAnticsEnvironment _environment;
+    private readonly MiniAnticsEnvironment _environment;
 
     /// <summary>
     /// The antics for this entity.
     /// </summary>
-    private List<ObjectAntics> _antics = new();
+    private readonly List<ObjectAntics> _antics = new();
 
     /// <summary>
     /// The base constructor for an entity.
@@ -62,11 +63,44 @@ public abstract class BaseEntity
     }
     
     /// <summary>
+    /// The base constructor for an entity.
+    /// </summary>
+    /// <param name="puchittoSystemsProvider">
+    /// The Puchitto systems provider.
+    /// </param>
+    public BaseEntity(
+        IPuchittoSystemsProvider puchittoSystemsProvider,
+        LevelEntityData entityData)
+    {
+        _environment = puchittoSystemsProvider.MakeChildEnvironment();
+
+        IsAuthored = true;
+        
+        Name = entityData.Name;
+        _antics = entityData.Antics?
+            .Select(a => new ObjectAntics
+            {
+                On = a.On switch
+                {
+                    "attach" => AnticsOn.Attach,
+                    "click" => AnticsOn.Click,
+                    "rpc" => AnticsOn.Rpc,
+                    _ => throw new NotImplementedException()
+                },
+                Script = new MiniAnticsScript(a.Script)
+            }).ToList() ?? [];
+
+        Transform.Position = entityData.Transform.Position;
+        Transform.Rotation = entityData.Transform.Rotation;
+        Transform.Scale = entityData.Transform.Scale;
+    }
+    
+    /// <summary>
     /// Runs the antics for this object.
     /// </summary>
     /// <param name="on">What antics attach point should be used?</param>
     /// <param name="name">Sets the specified name we're interested in.</param>
-    public void RunAntics(AnticsOn on, string? name)
+    public void RunAntics(AnticsOn on, string? name = null)
     {
         var isNameEmpty = string.IsNullOrEmpty(name);
         foreach (var antic in _antics)
@@ -81,7 +115,14 @@ public abstract class BaseEntity
                 continue;
             }
 
-            antic.Script.Run(_environment);
+            try
+            {
+                antic.Script.Run(_environment);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Failed to run antics: {0}", e.Message);
+            }
         }
     }
     

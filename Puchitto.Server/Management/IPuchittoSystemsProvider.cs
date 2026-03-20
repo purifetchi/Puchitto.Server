@@ -13,9 +13,9 @@ namespace Puchitto.Server.Management;
 public interface IPuchittoSystemsProvider
 {
     /// <summary>
-    /// The realm.
+    /// The realm manager.
     /// </summary>
-    Realm Realm { get; }
+    RealmManager RealmManager { get; }
     
     /// <summary>
     /// The client manager.

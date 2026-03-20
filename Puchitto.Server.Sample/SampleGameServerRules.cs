@@ -3,6 +3,7 @@ using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
 using Puchitto.Server.Packets;
+using Puchitto.Server.Realms.Definitions;
 
 namespace Puchitto.Server.Sample;
 
@@ -12,6 +13,14 @@ public class SampleGameServerRules : IGameServerRules
 
     public IPuchittoSystemsProvider PuchittoSystemsProvider { get; set; } = null!;
 
+    public IReadOnlyList<RealmDefinition> GetRealmDefinitions()
+    {
+        return
+        [
+            new RealmDefinition(true, "../../../../../personal-website/prefetcher.net/public/game/cooked.alf", "/game/cooked.alf")
+        ];
+    }
+    
     public void RegisterPackets(PacketRegistry registry)
     {
         registry.RegisterHandler<RequestWalkPacket>(OnRequestWalk);
@@ -21,7 +30,8 @@ public class SampleGameServerRules : IGameServerRules
     {
         // Find the entity for this player.
         var entity = PuchittoSystemsProvider
-            .Realm
+            .RealmManager
+            .Default
             .EntityManager
             .Entities
             .FirstOrDefault(ent => ent.Owner?.Id == client.Id && ent is AtaEntity);
@@ -60,7 +70,7 @@ public class SampleGameServerRules : IGameServerRules
     {
         return new AtaEntity(PuchittoSystemsProvider)
         {
-            Id = PuchittoSystemsProvider.Realm.IdAllocator.GetNextId()
+            Id = PuchittoSystemsProvider.RealmManager.Default.IdAllocator.GetNextId()
         };
     }
 }

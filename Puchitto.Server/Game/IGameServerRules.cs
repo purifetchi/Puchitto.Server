@@ -1,6 +1,7 @@
 ﻿using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
 using Puchitto.Server.Packets;
+using Puchitto.Server.Realms.Definitions;
 
 namespace Puchitto.Server.Game;
 
@@ -20,18 +21,16 @@ public interface IGameServerRules
     IPuchittoSystemsProvider PuchittoSystemsProvider { get; set; }
 
     /// <summary>
+    /// Gets the list of realm definitions.
+    /// </summary>
+    /// <returns>The list of realm definitions for this game.</returns>
+    IReadOnlyList<RealmDefinition> GetRealmDefinitions();
+
+    /// <summary>
     /// Registers custom packets.
     /// </summary>
     /// <param name="registry"></param>
     void RegisterPackets(PacketRegistry registry);
-    
-    /// <summary>
-    /// Gets the path to the package.
-    /// </summary>
-    /// <returns>
-    /// The path to the package.
-    /// </returns>
-    string GetPackagePath();
     
     /// <summary>
     /// Creates an entity for a client.

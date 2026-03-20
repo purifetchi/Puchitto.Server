@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game.Entities;
+using Puchitto.Server.Game.Entities.Scripting;
 using Puchitto.Server.Packets.Engine.Clientbound;
 
 namespace Puchitto.Server.Game;
@@ -55,6 +56,7 @@ public class EntityManager
         lock (_entityLock)
         {
             _entities.Add(entity);
+            entity.RunAntics(AnticsOn.Attach);
         }
     }
 

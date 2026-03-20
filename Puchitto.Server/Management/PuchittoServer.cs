@@ -24,7 +24,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// <summary>
     /// The entity manager.
     /// </summary>
-    public Realm Realm { get; }
+    public RealmManager RealmManager { get; }
 
     /// <summary>
     /// The client manager.
@@ -109,7 +109,10 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             MakeLogger<ClientManager>()
         );
 
-        Realm = new Realm(this);
+        RealmManager = new RealmManager(
+            this,
+            _rules
+        );
 
         RegisterInternalHandlers();
         SetupMiniAnticsEnvironment();
@@ -120,6 +123,8 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// </summary>
     public async Task Host()
     {
+        await RealmManager.LoadRealms();
+        
         _webSocketListener.OnClientConnected =
             connection => ClientManager.AcceptConnection(connection);
         
@@ -148,9 +153,14 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         _logger.LogInformation("Client {Id} sent us a join packet!", client.Id);
         client.SetState(ClientState.Connecting);
 
+        // TODO: We shouldn't iterate the realms returned by the rules every time.
+        var defaultRealm = _rules.GetRealmDefinitions()
+            .First(r => r.IsDefault);
+        var path = defaultRealm.RemotePackagePath ?? defaultRealm.LocalPackagePath;
+        
         await client.SendData(new LoadPacket
         {
-            LevelName = _rules.GetPackagePath()
+            LevelName = path
         });
     }
     
@@ -170,7 +180,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         
         if (newState == ClientState.Loaded)
         {
-            await Realm.SpawnPlayer(client, _rules);
+            await RealmManager.Default.SpawnPlayer(client, _rules);
         }
     }
     
@@ -188,7 +198,8 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         
         // Find the object
         // TODO: Make this client realm aware once we implement multi-realm simulations.
-        var entity = Realm
+        var entity = RealmManager
+            .Default
             .EntityManager
             .GetEntityById<BaseEntity>(packet.ObjectId);
         
