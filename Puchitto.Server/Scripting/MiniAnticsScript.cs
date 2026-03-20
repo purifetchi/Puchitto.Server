@@ -95,6 +95,7 @@ public class MiniAnticsScript
         // Check if this symbol is special.
         return symbol.Name switch 
         {
+            "if" => new IfExpression(atoms[1..]),
             "for-all" => new ForAllExpression(atoms[1..]),
             _ => new Expression(atoms)
         };
