@@ -1,6 +1,8 @@
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game.Entities.Scripting;
 using Puchitto.Server.Management;
+using Puchitto.Server.Packets.Engine.Bidirectional;
+using Puchitto.Server.Packets.Serialization.Facades;
 using Puchitto.Server.Realms.Definitions;
 using Puchitto.Server.Scripting;
 
@@ -87,12 +89,50 @@ public abstract class BaseEntity
                     "rpc" => AnticsOn.Rpc,
                     _ => throw new NotImplementedException()
                 },
-                Script = new MiniAnticsScript(a.Script)
+                Script = new MiniAnticsScript(a.Script),
+                Name = a.Name
             }).ToList() ?? [];
 
         Transform.Position = entityData.Transform.Position;
         Transform.Rotation = entityData.Transform.Rotation;
         Transform.Scale = entityData.Transform.Scale;
+    }
+
+    /// <summary>
+    /// Called when this object is attached.
+    /// </summary>
+    public virtual void OnAttached()
+    {
+        SetupCustomMiniAnticsEnvironment(_environment);
+        RunAntics(AnticsOn.Attach);
+    }
+    
+    /// <summary>
+    /// Sets up the custom miniantics environment for this entity.
+    /// </summary>
+    /// <param name="environment">The environment.</param>
+    protected virtual void SetupCustomMiniAnticsEnvironment(MiniAnticsEnvironment environment)
+    {
+        environment.Set("invoke-rpc", (string name, Client client) =>
+        {
+            var miniAnticsRpcPacket = new MiniAnticsRpcPacket
+            {
+                Name = name,
+                ObjectId = Id
+            };
+            var writer = client.BeginDataSend(miniAnticsRpcPacket.PacketId);
+            miniAnticsRpcPacket.Serialize(writer);
+
+            return writer;
+        });
+        
+        environment.Set("send", (WriterFacade f) =>
+        {
+            _ = Task.Run(async () =>
+            {
+                await f.Client.FinishDataSend(f);
+            });
+        });
     }
     
     /// <summary>

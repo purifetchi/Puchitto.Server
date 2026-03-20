@@ -1,4 +1,5 @@
 using Puchitto.Server.Packets.Serialization;
+using Puchitto.Server.Packets.Serialization.Facades;
 
 namespace Puchitto.Server.Packets.Engine.Bidirectional;
 
@@ -30,7 +31,16 @@ public struct MiniAnticsRpcPacket : IPuchittoPacket
     {
         writer.WriteInt32(ObjectId);
         writer.WriteString(Name);
-        // TODO: Payload
+    }
+    
+    /// <summary>
+    /// Serializes the packet into a WriterFacade.
+    /// </summary>
+    /// <param name="writer">The WriterFacade.</param>
+    public void Serialize(WriterFacade writer)
+    {
+        writer.WriteInt32(ObjectId);
+        writer.WriteString(Name);
     }
 
     /// <inheritdoc />

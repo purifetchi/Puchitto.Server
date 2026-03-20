@@ -12,7 +12,6 @@ public class UnknownEntity : BaseEntity
         IPuchittoSystemsProvider puchittoSystemsProvider)
         : base(puchittoSystemsProvider, entityData)
     {
-        Name = entityData.Name;
     }
 
     public override string Type { get; } = "unknown";

@@ -14,7 +14,7 @@ public class MiniAnticsScript
     private static readonly Regex TokenizerRegex = new("""("[^"\\]*(?:\\[\S\s][^"\\]*)*"|\(|\)|\n|\s+|[^\s()]+)""", RegexOptions.Compiled);
 
     private IMiniAnticsAtom Atom { get; }
-    
+
     public MiniAnticsScript(string script)
     {
         var tokens = Tokenize(script);
@@ -54,7 +54,7 @@ public class MiniAnticsScript
             }
 
             tokens.Dequeue();
-            return new Expression(expressions);
+            return BuildExpression(expressions);
         }
         
         // Check if this is a number
@@ -70,13 +70,34 @@ public class MiniAnticsScript
             // Check if the final token is also a "
             if (token[^1] != '"')
             {
-                throw new Exception("Unterminated string."); // TODO
+                throw new MiniAnticsParseException("Unterminated string found in a Text symbol.");
             }
 
             return new Text(token.Trim('"'));
         }
 
         return new Symbol(token);
+    }
+
+    /// <summary>
+    /// Builds a MiniAntics expression.
+    /// </summary>
+    /// <param name="atoms">The atoms.</param>
+    /// <returns>The given expression.</returns>
+    private IMiniAnticsAtom BuildExpression(List<IMiniAnticsAtom> atoms)
+    {
+        var first = atoms[0];
+        if (first is not Symbol symbol)
+        {
+            return new Expression(atoms);
+        }
+        
+        // Check if this symbol is special.
+        return symbol.Name switch 
+        {
+            "for-all" => new ForAllExpression(atoms[1..]),
+            _ => new Expression(atoms)
+        };
     }
     
     /// <summary>

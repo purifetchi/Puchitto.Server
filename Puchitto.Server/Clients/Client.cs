@@ -1,6 +1,7 @@
-﻿using System.Buffers;
+using System.Buffers;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Serialization;
+using Puchitto.Server.Packets.Serialization.Facades;
 
 namespace Puchitto.Server.Clients;
 
@@ -58,25 +59,107 @@ public class Client
         {
             return;
         }
+
+        var buffer = RentBuffer();
         
+        var writer = new NetworkWriter(buffer, 0);
+        WriteEnvelope(data.PacketId, ref writer);
+        data.Serialize(ref writer);
+
+        await AdjustPacketLengthAndSend(
+            writer.Position,
+            buffer);
+
+        ReturnBuffer(buffer);
+    }
+
+    /// <summary>
+    /// Begins sending data.
+    /// </summary>
+    /// <returns>
+    /// The writer facade.
+    /// </returns>
+    public WriterFacade BeginDataSend(int opCode)
+    {
+        // TODO: The facade should be pooled.
+        var buffer = RentBuffer();
+        var writer = new NetworkWriter(buffer, 0);
+        WriteEnvelope(opCode, ref writer);
+        
+        return new WriterFacade(buffer, this, writer.Position);
+    }
+
+    /// <summary>
+    /// Finishes sending the data.
+    /// </summary>
+    /// <param name="facade">The facade.</param>
+    public async Task FinishDataSend(WriterFacade facade)
+    {
+        await AdjustPacketLengthAndSend(
+            facade.Written,
+            facade.BackingArray);
+        
+        ReturnBuffer(facade.BackingArray);
+    }
+
+    /// <summary>
+    /// Rents a buffer.
+    /// </summary>
+    /// <returns>
+    /// The buffer.
+    /// </returns>
+    private byte[] RentBuffer()
+    {
         // 10KiB by default.
         const int bufferSizeInBytes = 1024 * 10;
         var buffer = ArrayPool<byte>.Shared.Rent(bufferSizeInBytes);
 
-        // Skip over the size of the envelope to save space for it.
-        var writer = new NetworkWriter(buffer, PacketEnvelope.EnvelopeSize);
-        data.Serialize(ref writer);
+        return buffer;
+    }
 
+    /// <summary>
+    /// Writes the envelope.
+    /// </summary>
+    /// <param name="opCode">The packet's opcode.</param>
+    /// <param name="writer">The envelope.</param>
+    private void WriteEnvelope(
+        int opCode,
+        ref NetworkWriter writer)
+    {
         var sequenceId = Interlocked.Increment(ref _lastSentSequenceId);
-        var packetId = data.PacketId;
-        var length = writer.Position;
-        var envelope = new PacketEnvelope(sequenceId, packetId, length - PacketEnvelope.EnvelopeSize);
+        var envelope = new PacketEnvelope(sequenceId, opCode, 0);
         
-        var envelopeWriter = new NetworkWriter(buffer, 0);
-        envelope.Serialize(ref envelopeWriter);
+        envelope.Serialize(ref writer);
+    }
 
-        await Connection.SendBuffer(new ArraySegment<byte>(buffer, 0, length));
+    /// <summary>
+    /// Adjusts the envelope's length and sends the data.
+    /// </summary>
+    /// <param name="length">
+    /// The length.
+    /// </param>
+    /// <param name="buffer">
+    /// The buffer.
+    /// </param>
+    private async Task AdjustPacketLengthAndSend(
+        int length,
+        byte[] buffer)
+    {
+        var actualLength = length - PacketEnvelope.EnvelopeSize;
+        var nw = new NetworkWriter(buffer, PacketEnvelope.LengthOffset);
+        nw.WriteInt32(actualLength);
         
+        await Connection.SendBuffer(new ArraySegment<byte>(buffer, 0, length));
+    }
+
+    /// <summary>
+    /// Returns the rented buffer.
+    /// </summary>
+    /// <param name="buffer">
+    /// The buffer.
+    /// </param>
+    private void ReturnBuffer(byte[] buffer)
+    {
         ArrayPool<byte>.Shared.Return(buffer);
     }
 

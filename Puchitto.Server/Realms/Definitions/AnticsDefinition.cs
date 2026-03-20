@@ -9,4 +9,7 @@ public class AnticsDefinition
 
     [JsonPropertyName("script")]
     public required string Script { get; set; }
+    
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
 }

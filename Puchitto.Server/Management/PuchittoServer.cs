@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
@@ -9,6 +9,7 @@ using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Engine.Bidirectional;
 using Puchitto.Server.Packets.Engine.Clientbound;
 using Puchitto.Server.Packets.Engine.Serverbound;
+using Puchitto.Server.Packets.Serialization.Facades;
 using Puchitto.Server.Realms;
 using Puchitto.Server.Scripting;
 
@@ -243,5 +244,46 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         
         _miniAnticsEnvironment.Set("pass", () => { });
         _miniAnticsEnvironment.Set("progn", (params object[]? values) => values is { Length: > 0 } ? values[^1] : null);
+
+        SetupServerSpecificMiniAnticsMethods();
+        SetupNetworkingMiniAnticsMethods();
+    }
+
+    /// <summary>
+    /// Sets up the networking MiniAntics methods.
+    /// </summary>
+    private void SetupNetworkingMiniAnticsMethods()
+    {
+        _miniAnticsEnvironment.Set("net-write-i32", (int value, WriterFacade f) =>
+        {
+            f.WriteInt32(value);
+            return f;
+        });
+
+        _miniAnticsEnvironment.Set("net-write-bool", (bool value, WriterFacade f) =>
+        {
+            f.WriteBoolean(value);
+            return f;
+        });
+
+        _miniAnticsEnvironment.Set("net-write-f32", (float value, WriterFacade f) =>
+        {
+            f.WriteFloat(value);
+            return f;
+        });
+
+        _miniAnticsEnvironment.Set("net-write-str", (string str, WriterFacade f) =>
+        {
+            f.WriteString(str);
+            return f;
+        });
+    }
+
+    /// <summary>
+    /// Sets up the server-specific MiniAntics methods.
+    /// </summary>
+    private void SetupServerSpecificMiniAnticsMethods()
+    {
+        _miniAnticsEnvironment.Set("clients", () => ClientManager.Clients);
     }
 }

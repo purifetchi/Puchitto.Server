@@ -11,6 +11,11 @@ public readonly record struct PacketEnvelope
     /// The size of the packet envelope.
     /// </summary>
     public const int EnvelopeSize = sizeof(int) * 3;
+
+    /// <summary>
+    /// The offset of the length within the envelope.
+    /// </summary>
+    public const int LengthOffset = EnvelopeSize - sizeof(int);
     
     /// <summary>
     /// The sequence number, always monotonically rising.

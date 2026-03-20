@@ -30,6 +30,6 @@ public class Symbol : IMiniAnticsAtom
     /// <inheritdoc />
     public object? Evaluate(MiniAnticsEnvironment env)
     {
-        return env.Get(Name) ?? throw new Exception("Symbol wasn't bound to anything.");
+        return env.Get(Name) ?? throw new MiniAnticsRuntimeException($"Symbol {Name} wasn't bound to anything.");
     }
 }

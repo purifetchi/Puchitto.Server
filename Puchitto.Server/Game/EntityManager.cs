@@ -46,7 +46,7 @@ public class EntityManager
         _logger = logger;
         _clientManager = clientManager;
     }
-
+    
     /// <summary>
     /// Adds an entity.
     /// </summary>
@@ -56,7 +56,7 @@ public class EntityManager
         lock (_entityLock)
         {
             _entities.Add(entity);
-            entity.RunAntics(AnticsOn.Attach);
+            entity.OnAttached();
         }
     }
 
@@ -117,6 +117,9 @@ public class EntityManager
         {
             foreach (var entity in _entities)
             {
+                if (entity.IsAuthored)
+                    continue;
+                
                 var entityData = entity.GetEntityDataForSerialization();
                 var serializedEntityData = JsonSerializer.Serialize(entityData);
                 var isOwner = entity.Owner?.Id == client.Id;
