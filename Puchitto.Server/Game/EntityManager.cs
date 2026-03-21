@@ -76,6 +76,37 @@ public class EntityManager
     }
 
     /// <summary>
+    /// Gets an entity of a given type.
+    /// </summary>
+    /// <typeparam name="TEntity">The type of the entity.</typeparam>
+    /// <returns>The entity if it is found.</returns>
+    public TEntity? GetEntityOfType<TEntity>()
+    {
+        lock (_entityLock)
+        {
+            return _entities.OfType<TEntity>().FirstOrDefault();
+        }
+    }
+
+    /// <summary>
+    /// Gets all the entities by their name.
+    /// </summary>
+    /// <param name="name">The name of the entity.</param>
+    /// <typeparam name="TEntity">The type of the entity.</typeparam>
+    /// <returns>The given entities.</returns>
+    public TEntity[] GetEntitiesByName<TEntity>(string name)
+        where TEntity : BaseEntity
+
+    {
+        lock (_entityLock)
+        {
+            return _entities.Where(e => e.Name == name)
+                .Cast<TEntity>()
+                .ToArray();
+        }
+    }
+
+    /// <summary>
     /// Adds an entity and spawns it for all clients.
     /// </summary>
     /// <param name="entity">The entity.</param>

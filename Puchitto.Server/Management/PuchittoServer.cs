@@ -36,6 +36,11 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// The packet registry.
     /// </summary>
     public PacketRegistry Registry { get; }
+    
+    /// <summary>
+    /// The entity factory.
+    /// </summary>
+    public EntityFactory EntityFactory { get; }
 
     /// <summary>
     /// The current config.
@@ -103,6 +108,9 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             _config.Prefixes,
             MakeLogger<WebSocketListener>()
         );
+
+        EntityFactory = new EntityFactory(this);
+        _rules.RegisterEntities(EntityFactory);
 
         ClientManager = new ClientManager(
             _rules,

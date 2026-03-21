@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
+using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Realms;
 using Puchitto.Server.Scripting;
@@ -26,6 +27,11 @@ public interface IPuchittoSystemsProvider
     /// The packet registry.
     /// </summary>
     PacketRegistry Registry { get; }
+    
+    /// <summary>
+    /// The entity factory.
+    /// </summary>
+    EntityFactory EntityFactory { get; }
 
     /// <summary>
     /// Constructs a logger for a given type.

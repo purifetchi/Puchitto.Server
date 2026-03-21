@@ -2,6 +2,7 @@ using System.Buffers;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Serialization;
 using Puchitto.Server.Packets.Serialization.Facades;
+using Puchitto.Server.Realms;
 
 namespace Puchitto.Server.Clients;
 
@@ -19,6 +20,11 @@ public class Client
     /// The connection for this client.
     /// </summary>
     public ClientConnection Connection { get; }
+    
+    /// <summary>
+    /// The current realm the player is in.
+    /// </summary>
+    public Realm CurrentRealm { get; set; }
 
     /// <summary>
     /// The client state.

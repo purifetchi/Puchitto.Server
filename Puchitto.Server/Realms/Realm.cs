@@ -61,10 +61,8 @@ public class Realm
     {
         foreach (var entityDefinition in levelDefinition.Entities)
         {
-            var ent = new UnknownEntity(entityDefinition, _systemsProvider)
-            {
-                Id = entityDefinition.Id
-            };
+            var ent = _systemsProvider.EntityFactory
+                .CreateEntityFromLevelData(entityDefinition);
             
             EntityManager.AddEntity(ent);
         }
@@ -77,10 +75,13 @@ public class Realm
     /// <param name="rules">The rules.</param>
     public async Task SpawnPlayer(Client client, IGameServerRules rules)
     {
+        client.CurrentRealm = this;
+
         await EntityManager.SpawnMissingEntitiesFor(client);
-            
-        var entity = rules.CreateEntityForClient();
+
+        var entity = rules.CreateEntityForClient(this);
         entity.Owner = client;
+        
         await EntityManager.AddAndSpawnForEveryone(entity);   
     }
 }

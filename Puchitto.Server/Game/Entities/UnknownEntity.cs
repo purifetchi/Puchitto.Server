@@ -8,11 +8,5 @@ namespace Puchitto.Server.Game.Entities;
 /// </summary>
 public class UnknownEntity : BaseEntity
 {
-    public UnknownEntity(LevelEntityData entityData,
-        IPuchittoSystemsProvider puchittoSystemsProvider)
-        : base(puchittoSystemsProvider, entityData)
-    {
-    }
-
     public override string Type { get; } = "unknown";
 }

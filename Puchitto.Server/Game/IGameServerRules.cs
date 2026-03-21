@@ -1,6 +1,7 @@
 ﻿using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
 using Puchitto.Server.Packets;
+using Puchitto.Server.Realms;
 using Puchitto.Server.Realms.Definitions;
 
 namespace Puchitto.Server.Game;
@@ -33,10 +34,19 @@ public interface IGameServerRules
     void RegisterPackets(PacketRegistry registry);
     
     /// <summary>
+    /// Registers custom entities.
+    /// </summary>
+    /// <param name="entityFactory">The entity factory.</param>
+    void RegisterEntities(EntityFactory entityFactory);
+    
+    /// <summary>
     /// Creates an entity for a client.
     /// </summary>
+    /// <param name="realm">
+    /// The realm we're creating the entity in.
+    /// </param>
     /// <returns>
     /// The created entity.
     /// </returns>
-    BaseEntity CreateEntityForClient();
+    BaseEntity CreateEntityForClient(Realm realm);
 }

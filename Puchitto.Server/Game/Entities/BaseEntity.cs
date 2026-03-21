@@ -21,7 +21,7 @@ public abstract class BaseEntity
     /// <summary>
     /// The ID of the entity.
     /// </summary>
-    public required int Id { get; set; }
+    public int Id { get; set; }
     
     /// <summary>
     /// The name of the entity.
@@ -44,38 +44,33 @@ public abstract class BaseEntity
     public Client? Owner { get; set; }
 
     /// <summary>
+    /// The Puchitto systems provider.
+    /// </summary>
+    public IPuchittoSystemsProvider SystemsProvider { get; private set; } = null!;
+
+    /// <summary>
     /// The MiniAntics environment.
     /// </summary>
-    private readonly MiniAnticsEnvironment _environment;
+    private MiniAnticsEnvironment _environment = null!;
 
     /// <summary>
     /// The antics for this entity.
     /// </summary>
-    private readonly List<ObjectAntics> _antics = new();
-
-    /// <summary>
-    /// The base constructor for an entity.
-    /// </summary>
-    /// <param name="puchittoSystemsProvider">
-    /// The Puchitto systems provider.
-    /// </param>
-    public BaseEntity(IPuchittoSystemsProvider puchittoSystemsProvider)
+    private List<ObjectAntics> _antics = new();
+    
+    public void Initialize(IPuchittoSystemsProvider puchittoSystemsProvider)
     {
+        SystemsProvider = puchittoSystemsProvider;
         _environment = puchittoSystemsProvider.MakeChildEnvironment();
     }
     
-    /// <summary>
-    /// The base constructor for an entity.
-    /// </summary>
-    /// <param name="puchittoSystemsProvider">
-    /// The Puchitto systems provider.
-    /// </param>
-    public BaseEntity(
+    public void Initialize(
         IPuchittoSystemsProvider puchittoSystemsProvider,
         LevelEntityData entityData)
     {
-        _environment = puchittoSystemsProvider.MakeChildEnvironment();
+        Initialize(puchittoSystemsProvider);
 
+        Id = entityData.Id;
         IsAuthored = true;
         
         Name = entityData.Name;
