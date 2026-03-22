@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Puchitto.Server.Game;
 using Puchitto.Server.Packets;
+using Puchitto.Server.Packets.Engine.Bidirectional;
 using Puchitto.Server.Packets.Engine.Clientbound;
 
 namespace Puchitto.Server.Clients;
@@ -10,6 +11,11 @@ namespace Puchitto.Server.Clients;
 /// </summary>
 public class ClientManager
 {
+    /// <summary>
+    /// The heartbeat interval.
+    /// </summary>
+    public const int HeartbeatIntervalInSeconds = 5;
+    
     /// <summary>
     /// The delegate for when a client connects.
     /// </summary>
@@ -51,9 +57,9 @@ public class ClientManager
     private readonly IGameServerRules _gameServerRules;
     
     /// <summary>
-    /// The client lock.
+    /// The client semaphore.
     /// </summary>
-    private readonly Lock _clientLock = new(); 
+    private readonly SemaphoreSlim _clientSemaphore = new(1, 1);
     
     /// <summary>
     /// Gets all the clients.
@@ -83,6 +89,38 @@ public class ClientManager
     }
 
     /// <summary>
+    /// Heartbeats all the clients.
+    /// </summary>
+    public async Task HeartbeatClients()
+    {
+        var removedClients = new Queue<Client>();
+        
+        await _clientSemaphore.WaitAsync();
+        var now = DateTimeOffset.UtcNow;
+        foreach (var client in _clients)
+        {
+            var diff = now - client.LastKeepAliveReceived;
+            
+            // We can miss like two keepalives. 
+            if (diff.TotalSeconds >= HeartbeatIntervalInSeconds * 2.5)
+            {
+                _logger.LogWarning("Client {Id} dropped two consecutive KeepAlive packets.", client.Id);
+                removedClients.Enqueue(client);
+                continue;
+            }
+            
+            await client.SendData(new KeepAlivePacket());
+        }
+        
+        _clientSemaphore.Release();
+
+        while (removedClients.TryDequeue(out var client))
+        {
+            await client.Disconnect();
+        }
+    }
+
+    /// <summary>
     /// Accepts a client connection.
     /// </summary>
     /// <param name="connection">The client connection.</param>
@@ -90,10 +128,9 @@ public class ClientManager
     {
         var client = new Client(Guid.NewGuid(), connection);
 
-        lock (_clientLock)
-        {
-            _clients.Add(client);
-        }
+        await _clientSemaphore.WaitAsync();
+        _clients.Add(client);
+        _clientSemaphore.Release();
 
         client.Connection.OnIncomingMessage = async (data) =>
             await _packetProcessor.ProcessIncomingPacket(client, data);
@@ -123,10 +160,9 @@ public class ClientManager
             await OnClientDisconnected.Invoke(client);
         }
 
-        lock (_clientLock)
-        {
-            _clients.Remove(client);
-        }
+        await _clientSemaphore.WaitAsync();
+        _clients.Remove(client);
+        _clientSemaphore.Release();
     }
     
     /// <summary>

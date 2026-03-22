@@ -130,14 +130,31 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// <summary>
     /// Hosts the game.
     /// </summary>
-    public async Task Host()
+    public async Task Host(CancellationToken cancellationToken = default)
     {
         await RealmManager.LoadRealms();
         
         _webSocketListener.OnClientConnected =
             connection => ClientManager.AcceptConnection(connection);
         
-        await _webSocketListener.Listen();
+        _ = Task.Run(() => HeartbeatTask(cancellationToken), cancellationToken);
+        await _webSocketListener.Listen(cancellationToken);
+    }
+
+    /// <summary>
+    /// The heartbeat task.
+    /// </summary>
+    private async Task HeartbeatTask(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(
+                TimeSpan.FromSeconds(ClientManager.HeartbeatIntervalInSeconds),
+                cancellationToken
+            );
+            
+            await ClientManager.HeartbeatClients();
+        }
     }
 
     /// <summary>
@@ -150,8 +167,20 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         Registry.RegisterHandler<JoinPacket>(OnJoin);
         Registry.RegisterHandler<LoadStatePacket>(OnLoadState);
         Registry.RegisterHandler<MiniAnticsRpcPacket>(OnMiniAnticsRpc);
+        Registry.RegisterHandler<KeepAlivePacket>(OnKeepAlive);
     }
-    
+
+    /// <summary>
+    /// Executed when the client sends us a keep alive packet.
+    /// </summary>
+    /// <param name="packet">The packet.</param>
+    /// <param name="client">The client sending it.</param>
+    private Task OnKeepAlive(KeepAlivePacket packet, Client client)
+    {
+        client.LastKeepAliveReceived = DateTimeOffset.UtcNow;
+        return Task.CompletedTask;
+    }
+
     /// <summary>
     /// Executed when the client sends us a join packet.
     /// </summary>

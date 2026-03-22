@@ -25,6 +25,11 @@ public class Client
     /// The current realm the player is in.
     /// </summary>
     public Realm CurrentRealm { get; set; }
+    
+    /// <summary>
+    /// Sets the last time a KeepAlive packet has been received.
+    /// </summary>
+    public DateTimeOffset LastKeepAliveReceived { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
     /// The client state.

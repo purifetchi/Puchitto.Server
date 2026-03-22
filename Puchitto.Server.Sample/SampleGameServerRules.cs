@@ -3,6 +3,7 @@ using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
 using Puchitto.Server.Packets;
+using Puchitto.Server.Realms;
 using Puchitto.Server.Realms.Definitions;
 
 namespace Puchitto.Server.Sample;
@@ -25,6 +26,12 @@ public class SampleGameServerRules : IGameServerRules
     {
         registry.RegisterHandler<RequestWalkPacket>(OnRequestWalk);
     }
+
+    public void RegisterEntities(EntityFactory entityFactory)
+    {
+        
+    }
+    
 
     private async Task OnRequestWalk(RequestWalkPacket packet, Client client)
     {
@@ -66,9 +73,9 @@ public class SampleGameServerRules : IGameServerRules
         return "/game/cooked.alf";
     }
 
-    public BaseEntity CreateEntityForClient()
+    public BaseEntity CreateEntityForClient(Realm realm)
     {
-        return new AtaEntity(PuchittoSystemsProvider)
+        return new AtaEntity
         {
             Id = PuchittoSystemsProvider.RealmManager.Default.IdAllocator.GetNextId()
         };

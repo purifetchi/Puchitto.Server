@@ -38,5 +38,10 @@ public enum InternalPacketTypes
     /// <summary>
     /// Server &lt;-&gt; Client: A MiniAntics RPC call
     /// </summary>
-    MiniAnticsRpc = 7
+    MiniAnticsRpc = 7,
+    
+    /// <summary>
+    /// Server &lt;-&gt; Client: A heartbeat.
+    /// </summary>
+    KeepAlive = 8
 }

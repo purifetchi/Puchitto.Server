@@ -8,10 +8,4 @@ namespace Puchitto.Server.Sample;
 public class AtaEntity : BaseEntity
 {
     public override string Type => "ata";
-
-    public AtaEntity(IPuchittoSystemsProvider puchittoSystemsProvider)
-        : base(puchittoSystemsProvider)
-    {
-        
-    }
 }
