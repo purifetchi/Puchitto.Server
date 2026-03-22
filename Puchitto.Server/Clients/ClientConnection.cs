@@ -83,15 +83,16 @@ public class ClientConnection
     /// <param name="stoppingToken">The cancellation token.</param>
     public async Task SendBuffer(ArraySegment<byte> buffer, CancellationToken stoppingToken = default)
     {
-        if (_socket.State is WebSocketState.Closed 
-            or WebSocketState.CloseReceived
-            or WebSocketState.CloseSent)
-        {
-            return;
-        }
-        
         while (!stoppingToken.IsCancellationRequested && _socket.State != WebSocketState.Open)
         {
+            if (_socket.State is WebSocketState.Closed 
+                or WebSocketState.CloseReceived
+                or WebSocketState.CloseSent
+                or WebSocketState.Aborted)
+            {
+                return;
+            }
+            
             await Task.Yield();
         }
         
