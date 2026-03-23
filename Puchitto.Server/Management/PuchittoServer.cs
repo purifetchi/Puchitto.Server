@@ -283,7 +283,6 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         });
         
         _miniAnticsEnvironment.Set("pass", () => { });
-        _miniAnticsEnvironment.Set("progn", (params object[]? values) => values is { Length: > 0 } ? values[^1] : null);
 
         SetupServerSpecificMiniAnticsMethods();
         SetupNetworkingMiniAnticsMethods();

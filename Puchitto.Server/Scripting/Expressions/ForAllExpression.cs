@@ -17,7 +17,7 @@ public class ForAllExpression : IMiniAnticsAtom
     {
         if (atoms.Count != 3)
         {
-            throw new MiniAnticsParseException($"for-all expression expects 2 atoms, found {atoms.Count}");
+            throw new MiniAnticsParseException($"for-all expression expects 3 atoms, found {atoms.Count}");
         }
 
         if (atoms[0] is not Symbol variableNameSymbol)

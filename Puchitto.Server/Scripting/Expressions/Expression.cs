@@ -42,6 +42,15 @@ public class Expression : IMiniAnticsAtom
         }
 
         var values = Atoms[1..].Select(a => a.Evaluate(env)).ToArray();
-        return invokable.DynamicInvoke(values);
+
+        try
+        {
+            return invokable.DynamicInvoke(values);
+        }
+        catch (Exception e)
+        {
+            throw new MiniAnticsRuntimeException(
+                $"Failed to run expression {Atoms[0].ToAbstractRepresentation()}: {e}");
+        }
     }
 }

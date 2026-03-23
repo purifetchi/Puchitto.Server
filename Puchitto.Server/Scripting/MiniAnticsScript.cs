@@ -96,6 +96,8 @@ public class MiniAnticsScript
         return symbol.Name switch 
         {
             "if" => new IfExpression(atoms[1..]),
+            "progn" => new PrognExpression(atoms[1..]),
+            "let" => new LetExpression(atoms[1..]),
             "for-all" => new ForAllExpression(atoms[1..]),
             _ => new Expression(atoms)
         };
