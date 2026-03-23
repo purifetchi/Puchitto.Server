@@ -24,9 +24,19 @@ public abstract class BaseEntity
     public int Id { get; set; }
     
     /// <summary>
+    /// Is this object visible?
+    /// </summary>
+    public bool Visible { get; set; }
+    
+    /// <summary>
     /// The name of the entity.
     /// </summary>
     public string? Name { get; set; }
+    
+    /// <summary>
+    /// The tag this entity has.
+    /// </summary>
+    public string? Tag { get; set; }
     
     /// <summary>
     /// Is the current entity authored by the level?
@@ -57,6 +67,11 @@ public abstract class BaseEntity
     /// The antics for this entity.
     /// </summary>
     private List<ObjectAntics> _antics = new();
+
+    /// <summary>
+    /// Locks the environment while an RPC runs.
+    /// </summary>
+    private Lock _rpcLock = new();
     
     public void Initialize(IPuchittoSystemsProvider puchittoSystemsProvider)
     {
@@ -64,6 +79,11 @@ public abstract class BaseEntity
         _environment = puchittoSystemsProvider.MakeChildEnvironment();
     }
     
+    /// <summary>
+    /// Initializes an entity.
+    /// </summary>
+    /// <param name="puchittoSystemsProvider">The systems provider it's bound to.</param>
+    /// <param name="entityData">The entity data.</param>
     public void Initialize(
         IPuchittoSystemsProvider puchittoSystemsProvider,
         LevelEntityData entityData)
@@ -74,6 +94,9 @@ public abstract class BaseEntity
         IsAuthored = true;
         
         Name = entityData.Name;
+        Visible = entityData.Visible;
+        Tag = entityData.Tag;
+        
         _antics = entityData.Antics?
             .Select(a => new ObjectAntics
             {
@@ -128,6 +151,9 @@ public abstract class BaseEntity
                 await f.Client.FinishDataSend(f);
             });
         });
+        
+        environment.Set("visible", () => Visible);
+        environment.Set("set-visible", (bool visible) => Visible = visible);
     }
     
     /// <summary>
@@ -158,6 +184,23 @@ public abstract class BaseEntity
             {
                 Console.WriteLine("Failed to run antics: {0}", e.Message);
             }
+        }
+    }
+
+    /// <summary>
+    /// Handles an RPC sent by a client.
+    /// </summary>
+    /// <param name="name">The name of the RPC.</param>
+    /// <param name="sender">The sender client.</param>
+    public void HandleRpc(string name, Client sender)
+    {
+        // NOTE: We lock here because we don't want multiple clients calling an RPC overwriting the sender field.
+        //       Is this really the best solution?
+        lock (_rpcLock)
+        {
+            _environment.Set("sender", sender);
+            RunAntics(AnticsOn.Rpc, name);
+            _environment.Unset("sender");
         }
     }
     

@@ -15,6 +15,11 @@ public class MiniAnticsEnvironment
     {
         _valueMap[key] = value;
     }
+
+    public void Unset(string key)
+    {
+        _valueMap.Remove(key);
+    }
     
     public object? Get(string key)
     {

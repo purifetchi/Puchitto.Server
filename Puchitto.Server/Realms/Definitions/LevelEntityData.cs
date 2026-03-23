@@ -19,6 +19,9 @@ public class LevelEntityData
         
     [JsonPropertyName("tag")]
     public string? Tag { get; set; }
+    
+    [JsonPropertyName("visible")]
+    public bool Visible { get; set; }
         
     [JsonPropertyName("data")]
     public JsonElement Data { get; set; }

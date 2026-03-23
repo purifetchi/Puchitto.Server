@@ -241,7 +241,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             .EntityManager
             .GetEntityById<BaseEntity>(packet.ObjectId);
         
-        entity?.RunAntics(AnticsOn.Rpc, packet.Name);
+        entity?.HandleRpc(packet.Name, client);
     }
     
     /// <inheritdoc />
@@ -264,6 +264,9 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// </summary>
     private void SetupMiniAnticsEnvironment()
     {
+        _miniAnticsEnvironment.Set("true", true);
+        _miniAnticsEnvironment.Set("false", false);
+
         _miniAnticsEnvironment.Set("+", (float a, float b) => a + b);
         _miniAnticsEnvironment.Set("-", (float a, float b) => a - b);
         _miniAnticsEnvironment.Set("/", (float a, float b) => a / b);
@@ -291,6 +294,8 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// </summary>
     private void SetupNetworkingMiniAnticsMethods()
     {
+        _miniAnticsEnvironment.Set("is-server", true);
+        
         _miniAnticsEnvironment.Set("net-write-i32", (int value, WriterFacade f) =>
         {
             f.WriteInt32(value);
