@@ -44,12 +44,14 @@ public class EntityFactory
             Id = realm.IdAllocator.GetNextId()
         };
         
-        entity.Initialize(_systemsProvider);
+        entity.Initialize(realm);
 
         return entity;
     }
     
-    public BaseEntity CreateEntityFromLevelData(LevelEntityData levelEntityData)
+    public BaseEntity CreateEntityFromLevelData(
+        Realm realm,
+        LevelEntityData levelEntityData)
     {
         BaseEntity entity;
         
@@ -58,7 +60,7 @@ public class EntityFactory
             ? new UnknownEntity()
             : factoryDefinition.Build();
 
-        entity.Initialize(_systemsProvider, levelEntityData);
+        entity.Initialize(realm, levelEntityData);
         return entity;
     }
 }

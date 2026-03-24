@@ -144,8 +144,13 @@ public class ClientManager
         });
 
         await SendHandshake(client);
-    }
 
+        if (OnClientConnected is not null)
+        {
+            await OnClientConnected.Invoke(client);
+        }
+    }
+    
     /// <summary>
     /// Forget about the client.
     /// </summary>

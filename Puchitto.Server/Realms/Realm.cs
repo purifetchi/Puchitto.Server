@@ -25,11 +25,31 @@ public class Realm
     /// The ID allocator for this realm.
     /// </summary>
     public EntityIdAllocator IdAllocator { get; }
-
+    
     /// <summary>
     /// The puchitto systems provider.
     /// </summary>
-    private IPuchittoSystemsProvider _systemsProvider;
+    public IPuchittoSystemsProvider SystemsProvider { get; }
+
+    /// <summary>
+    /// The delegate for when a client joins this realm.
+    /// </summary>
+    public delegate Task ClientJoinedRealmEvent(Client client);
+    
+    /// <summary>
+    /// The delegate for when a client leaves this realm.
+    /// </summary>
+    public delegate Task ClientLeftRealmEvent(Client client);
+    
+    /// <summary>
+    /// Invoked when a client joins this realm.
+    /// </summary>
+    public event ClientJoinedRealmEvent? OnClientJoinedRealm;
+    
+    /// <summary>
+    /// Invoked when a client leaves this realm.
+    /// </summary>
+    public event ClientLeftRealmEvent? OnClientLeftRealm;
 
     /// <summary>
     /// Constructs a new Realm.
@@ -42,7 +62,7 @@ public class Realm
         Level levelDefinition,
         bool isDefault = false)
     {
-        _systemsProvider = puchittoSystemsProvider;
+        SystemsProvider = puchittoSystemsProvider;
         IsDefault = isDefault;
         EntityManager = new EntityManager(
             puchittoSystemsProvider.ClientManager,
@@ -61,8 +81,8 @@ public class Realm
     {
         foreach (var entityDefinition in levelDefinition.Entities)
         {
-            var ent = _systemsProvider.EntityFactory
-                .CreateEntityFromLevelData(entityDefinition);
+            var ent = SystemsProvider.EntityFactory
+                .CreateEntityFromLevelData(this, entityDefinition);
             
             EntityManager.AddEntity(ent);
         }
@@ -82,6 +102,11 @@ public class Realm
         var entity = rules.CreateEntityForClient(this);
         entity.Owner = client;
         
-        await EntityManager.AddAndSpawnForEveryone(entity);   
+        await EntityManager.AddAndSpawnForEveryone(entity);
+
+        if (OnClientJoinedRealm is not null)
+        {
+            await OnClientJoinedRealm.Invoke(client);
+        }
     }
 }

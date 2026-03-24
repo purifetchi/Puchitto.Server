@@ -3,6 +3,7 @@ using Puchitto.Server.Game.Entities.Scripting;
 using Puchitto.Server.Management;
 using Puchitto.Server.Packets.Engine.Bidirectional;
 using Puchitto.Server.Packets.Serialization.Facades;
+using Puchitto.Server.Realms;
 using Puchitto.Server.Realms.Definitions;
 using Puchitto.Server.Scripting;
 
@@ -54,9 +55,14 @@ public abstract class BaseEntity
     public Client? Owner { get; set; }
 
     /// <summary>
+    /// The realm that owns this entity.
+    /// </summary>
+    public Realm OwningRealm { get; private set; } = null!;
+    
+    /// <summary>
     /// The Puchitto systems provider.
     /// </summary>
-    public IPuchittoSystemsProvider SystemsProvider { get; private set; } = null!;
+    public IPuchittoSystemsProvider SystemsProvider => OwningRealm.SystemsProvider;
 
     /// <summary>
     /// The MiniAntics environment.
@@ -73,22 +79,22 @@ public abstract class BaseEntity
     /// </summary>
     private Lock _rpcLock = new();
     
-    public void Initialize(IPuchittoSystemsProvider puchittoSystemsProvider)
+    public void Initialize(Realm realm)
     {
-        SystemsProvider = puchittoSystemsProvider;
-        _environment = puchittoSystemsProvider.MakeChildEnvironment();
+        OwningRealm = realm;
+        _environment = SystemsProvider.MakeChildEnvironment();
     }
     
     /// <summary>
     /// Initializes an entity.
     /// </summary>
-    /// <param name="puchittoSystemsProvider">The systems provider it's bound to.</param>
+    /// <param name="realm">The realm that owns this entity.</param>
     /// <param name="entityData">The entity data.</param>
     public void Initialize(
-        IPuchittoSystemsProvider puchittoSystemsProvider,
+        Realm realm,
         LevelEntityData entityData)
     {
-        Initialize(puchittoSystemsProvider);
+        Initialize(realm);
 
         Id = entityData.Id;
         IsAuthored = true;
