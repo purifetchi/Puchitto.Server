@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game.Entities.Scripting;
 using Puchitto.Server.Management;
@@ -120,6 +121,8 @@ public abstract class BaseEntity
         Transform.Position = entityData.Transform.Position;
         Transform.Rotation = entityData.Transform.Rotation;
         Transform.Scale = entityData.Transform.Scale;
+        
+        LoadEntityData(entityData.Data);
     }
 
     /// <summary>
@@ -209,16 +212,18 @@ public abstract class BaseEntity
             _environment.Unset("sender");
         }
     }
-    
+
     /// <summary>
     /// Gets the entity data for serialization.
     /// </summary>
     /// <returns>
     /// The entity data.
     /// </returns>
-    public object GetEntityDataForSerialization()
-    {
-        // TODO
-        return new object();
-    }
+    public abstract object GetEntityDataForSerialization();
+
+    /// <summary>
+    /// Loads the entity data from JSON.
+    /// </summary>
+    /// <param name="data">The entity data.</param>
+    public abstract void LoadEntityData(JsonElement data);
 }

@@ -279,7 +279,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         
         _miniAnticsEnvironment.Set("print", (object value) =>
         {
-            _logger.LogInformation($"[MiniAntics] {value}");
+            _logger.LogInformation("[MiniAntics] {Value}", value);
         });
         
         _miniAnticsEnvironment.Set("pass", () => { });
