@@ -18,11 +18,21 @@ public class ClientConnection
     /// The socket this client connection is using.
     /// </summary>
     private readonly WebSocket _socket;
+
+    /// <summary>
+    /// The socket abort cancellation token source.
+    /// </summary>
+    private readonly CancellationTokenSource _abortCts = new();
     
     /// <summary>
     /// The read buffer.
     /// </summary>
     private readonly byte[] _readBuffer = new byte[1024 * 10];
+    
+    /// <summary>
+    /// The send lock.
+    /// </summary>
+    private readonly SemaphoreSlim _sendLock = new(1, 1);
 
     /// <summary>
     /// Constructs a new client connection.
@@ -37,43 +47,82 @@ public class ClientConnection
     /// Pumps incoming messages.
     /// </summary>
     /// <param name="stoppingToken">The cancellation token.</param>
-    public async Task PumpMessages(CancellationToken stoppingToken)
+    public async Task PumpMessages()
     {
-        while (!stoppingToken.IsCancellationRequested && _socket.State == WebSocketState.Open)
+        try
         {
-            WebSocketReceiveResult result;
-            var read = 0;
-            do
+            var token = _abortCts.Token;
+            while (!token.IsCancellationRequested && _socket.State == WebSocketState.Open)
             {
-                result = await _socket.ReceiveAsync(
-                    new ArraySegment<byte>(_readBuffer, read, _readBuffer.Length - read),
-                    stoppingToken
-                );
-                read += result.Count;
-            } while (!result.EndOfMessage);
+                var (result, read) = await ReadOneMessage(token);
 
-            if (result.MessageType == WebSocketMessageType.Close)
-            {
-                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, stoppingToken);
-                break;
+                if (result == null ||
+                    token.IsCancellationRequested ||
+                    _socket.State != WebSocketState.Open)
+                {
+                    break;
+                }
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, token);
+                    break;
+                }
+
+                if (result.MessageType != WebSocketMessageType.Binary)
+                {
+                    continue;
+                }
+
+                var segment = new ArraySegment<byte>(_readBuffer, 0, read);
+                if (OnIncomingMessage != null)
+                {
+                    await OnIncomingMessage(segment);
+                }
             }
-
-            if (result.MessageType != WebSocketMessageType.Binary)
+        }
+        catch (WebSocketException)
+        {
+            // Swallow, the client disconnected ungracefully. Can happen.
+        }
+        catch (OperationCanceledException)
+        {
+            // Swallow, cancelled from within Close()
+        }
+        finally
+        {
+            if (OnConnectionClosed != null)
             {
-                continue;
+                await OnConnectionClosed();
+            }    
+        }
+    }
+
+    /// <summary>
+    /// Reads one incoming message from the client.
+    /// </summary>
+    /// <param name="stoppingToken">The cancellation token.</param>
+    /// <returns>The message and the amount of data read.</returns>
+    private async Task<(WebSocketReceiveResult? result, int read)> ReadOneMessage(CancellationToken stoppingToken)
+    {
+        WebSocketReceiveResult result;
+        var read = 0;
+        do
+        {
+            if (read >= _readBuffer.Length)
+            {
+                await _socket.CloseAsync(WebSocketCloseStatus.MessageTooBig, "", stoppingToken);
+                return (null, 0);
             }
             
-            var segment = new ArraySegment<byte>(_readBuffer, 0, read);
-            if (OnIncomingMessage != null)
-            {
-                await OnIncomingMessage(segment);
-            }
-        }
+            result = await _socket.ReceiveAsync(
+                new ArraySegment<byte>(_readBuffer, read, _readBuffer.Length - read),
+                stoppingToken
+            );
+            read += result.Count;
+        } while (!result.EndOfMessage);
         
-        if (OnConnectionClosed != null)
-        {
-            await OnConnectionClosed();
-        }
+        return (result, read);
     }
 
     /// <summary>
@@ -95,13 +144,22 @@ public class ClientConnection
             
             await Task.Yield();
         }
-        
-        await _socket.SendAsync(
-            buffer,
-            WebSocketMessageType.Binary,
-            WebSocketMessageFlags.EndOfMessage,
-            stoppingToken
-        );
+     
+        await _sendLock.WaitAsync(stoppingToken);
+
+        try
+        {
+            await _socket.SendAsync(
+                buffer,
+                WebSocketMessageType.Binary,
+                WebSocketMessageFlags.EndOfMessage,
+                stoppingToken
+            );
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
     }
 
     /// <summary>
@@ -109,6 +167,13 @@ public class ClientConnection
     /// </summary>
     public async Task Close()
     {
+        if (_socket.State != WebSocketState.Open)
+        {
+            await _abortCts.CancelAsync();
+            return;
+        }
+        
         await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+        await _abortCts.CancelAsync();
     }
 }

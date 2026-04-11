@@ -140,7 +140,7 @@ public class ClientManager
         
         _ = Task.Run(async () =>
         {
-            await client.Connection.PumpMessages(CancellationToken.None);
+            await client.Connection.PumpMessages();
         });
 
         await SendHandshake(client);
