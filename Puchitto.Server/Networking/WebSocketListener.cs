@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.WebSockets;
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
 
@@ -77,7 +78,38 @@ public class WebSocketListener
     /// <param name="context">The HTTP listener context.</param>
     private async Task HandleIncomingWebSocketClient(HttpListenerContext context)
     {
-        var webSocketContext = await context.AcceptWebSocketAsync("puchitto");
+        WebSocketContext webSocketContext;
+        try
+        {
+            webSocketContext = await context.AcceptWebSocketAsync("puchitto");
+        }
+        catch (WebSocketException wex)
+        {
+            _logger.LogError(wex, "A WebSocket exception occurred while trying to accept a WebSocket.");
+            var errorMessage = wex.WebSocketErrorCode switch
+            {
+                WebSocketError.UnsupportedProtocol => "Not a Puchitto client.",
+                WebSocketError.UnsupportedVersion => "Unsupported WebSocket version.",
+                WebSocketError.HeaderError => "Malformed headers.",
+                _ => "An unknown WebSocket exception has occured."
+            };
+            
+            await ReturnUnableToConnectResponse(context, errorMessage);
+            return;
+        }
+        catch (ArgumentException)
+        {
+            _logger.LogError("Tried to connect with a malformed subprotocol.");
+            await ReturnUnableToConnectResponse(context, "Malformed subprotocol.");
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An unknown exception occurred while trying to accept a WebSocket.");
+            await ReturnUnableToConnectResponse(context, "Unknown failure.");
+            return;
+        }
+        
         var webSocket = webSocketContext.WebSocket;
         _logger.LogInformation("Accepted new WebSocket client.");
 
@@ -99,6 +131,24 @@ public class WebSocketListener
         {
             await sw.WriteLineAsync(errorMessage);
             context.Response.StatusCode = 419;
+        }
+
+        context.Response.Close();
+    }
+    
+    /// <summary>
+    /// Returns an invalid response if the incoming connection is malformed.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
+    /// <param name="errorMessage">The error message.</param>
+    private async Task ReturnUnableToConnectResponse(
+        HttpListenerContext context,
+        string errorMessage)
+    {
+        await using (var sw = new StreamWriter(context.Response.OutputStream))
+        {
+            await sw.WriteLineAsync(errorMessage);
+            context.Response.StatusCode = 400;
         }
 
         context.Response.Close();
