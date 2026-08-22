@@ -1,7 +1,9 @@
+using System.Threading.Channels;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
+using Puchitto.Server.Packets.Engine.Clientbound;
 using Puchitto.Server.Realms.Definitions;
 
 namespace Puchitto.Server.Realms;
@@ -12,10 +14,20 @@ namespace Puchitto.Server.Realms;
 public class Realm
 {
     /// <summary>
-    /// Is this realm the default realm for loading?
+    /// The type that is used as a thread action callback dispatch.
     /// </summary>
-    public bool IsDefault { get; private set; }
+    public delegate Task RealmThreadActionCallback(Realm realm);
     
+    /// <summary>
+    /// The name of this realm.
+    /// </summary>
+    public string Name => _definition.Name;
+
+    /// <summary>
+    /// The flags for this realm.
+    /// </summary>
+    public RealmFlags Flags => _definition.Flags;
+
     /// <summary>
     /// The entity manager for this realm.
     /// </summary>
@@ -52,6 +64,16 @@ public class Realm
     public event ClientLeftRealmEvent? OnClientLeftRealm;
 
     /// <summary>
+    /// The definition of this realm.
+    /// </summary>
+    private readonly RealmDefinition _definition;
+
+    /// <summary>
+    /// The thread executor channel.
+    /// </summary>
+    private readonly Channel<RealmThreadActionCallback> _threadExecutorChannel;
+
+    /// <summary>
     /// Constructs a new Realm.
     /// </summary>
     /// <param name="puchittoSystemsProvider">
@@ -60,18 +82,63 @@ public class Realm
     public Realm(
         IPuchittoSystemsProvider puchittoSystemsProvider,
         Level levelDefinition,
-        bool isDefault = false)
+        RealmDefinition definition)
     {
+        _definition = definition;
+        
         SystemsProvider = puchittoSystemsProvider;
-        IsDefault = isDefault;
         EntityManager = new EntityManager(
             puchittoSystemsProvider.ClientManager,
             puchittoSystemsProvider.MakeLogger<EntityManager>());
 
+        _threadExecutorChannel = Channel.CreateUnbounded<RealmThreadActionCallback>();
+        
         ParseEntities(levelDefinition);
         
         var maxId = EntityManager.Entities.Max(e => e.Id);
         IdAllocator = new EntityIdAllocator(maxId + 1);
+    }
+
+    /// <summary>
+    /// Dispatches an action on the realm's ticking thread.
+    /// </summary>
+    /// <param name="action">
+    /// The action to run.
+    /// </param>
+    public async Task DispatchOnRealmThread(RealmThreadActionCallback action)
+    {
+        await _threadExecutorChannel.Writer.WriteAsync(action);
+    }
+
+    /// <summary>
+    /// Ticks this realm.
+    /// </summary>
+    public async Task Tick()
+    {
+        // Drain the thread executor channel.
+        while (_threadExecutorChannel.Reader.TryRead(out var action))
+        {
+            await action(this);
+        }
+        
+        
+    }
+
+    /// <summary>
+    /// Begins admitting a client into this realm.
+    /// </summary>
+    /// <param name="client">The client.</param>
+    public async Task BeginClientAdmit(Client client)
+    {
+        client.CurrentRealm = this;
+        
+        var downloadPath = _definition.RemotePackagePath ?? _definition.LocalPackagePath;
+        client.SetState(ClientState.Connecting);
+        
+        await client.SendData(new LoadPacket
+        {
+            LevelName = downloadPath
+        });
     }
 
     /// <summary>
@@ -99,7 +166,7 @@ public class Realm
 
         await EntityManager.SpawnMissingEntitiesFor(client);
 
-        var entity = rules.CreateEntityForClient(this);
+        var entity = rules.CreateEntityForClient(this, client);
         entity.Owner = client;
         
         await EntityManager.AddAndSpawnForEveryone(entity);

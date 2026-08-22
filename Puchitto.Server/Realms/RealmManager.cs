@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Data.Alf;
 using Puchitto.Server.Game;
@@ -44,15 +43,26 @@ public class RealmManager
     /// </summary>
     public async Task LoadRealms()
     {
-        var defs = _rules.GetRealmDefinitions();
+        var defs = _rules.RealmRegistry.GetRealmDefinitions();
         var realmTasks = defs.Select(CreateRealm);
         var realms = await Task.WhenAll(realmTasks);
 
-        _realms = realms.ToList();
-        Default = _realms.First(r => r.IsDefault);
+        _realms = [.. realms];
+        Default = _realms.First(r => r.Flags.HasFlag(RealmFlags.Default));
         
         var logger = _systemsProvider.MakeLogger<RealmManager>();
         logger.LogInformation("Loaded {Count} realm(s).", _realms.Count);
+    }
+
+    /// <summary>
+    /// Gets or begins loading a realm.
+    /// </summary>
+    /// <param name="name">The name of the realm.</param>
+    /// <returns>The realm itself.</returns>
+    public async Task<Realm> GetOrLoadRealm(string name)
+    {
+        // TODO: Check if we have this realm loaded.
+        return Realms.First(r => r.Name == name);
     }
 
     /// <summary>
@@ -74,7 +84,7 @@ public class RealmManager
             throw new InvalidOperationException("Tried to load realm with a broken level.json file.");
         }
         
-        var realm = new Realm(_systemsProvider, levelData, definition.IsDefault);
+        var realm = new Realm(_systemsProvider, levelData, definition);
         return realm;
     }
 }

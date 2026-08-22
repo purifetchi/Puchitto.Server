@@ -7,6 +7,7 @@ namespace Puchitto.Server.Realms.Definitions;
 /// <param name="LocalPackagePath">The local path to the realm ALF package.</param>
 /// <param name="RemotePackagePath">An optional remote path, if there's a place the client should fetch the package from.</param>
 public record RealmDefinition(
-    bool IsDefault,
+    string Name,
     string LocalPackagePath,
-    string? RemotePackagePath = null);
+    string? RemotePackagePath = null,
+    RealmFlags Flags = RealmFlags.None);

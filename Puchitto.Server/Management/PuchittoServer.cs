@@ -189,17 +189,17 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     private async Task OnJoin(JoinPacket packet, Client client)
     {
         _logger.LogInformation("Client {Id} sent us a join packet!", client.Id);
-        client.SetState(ClientState.Connecting);
 
-        // TODO: We shouldn't iterate the realms returned by the rules every time.
-        var defaultRealm = _rules.GetRealmDefinitions()
-            .First(r => r.IsDefault);
-        var path = defaultRealm.RemotePackagePath ?? defaultRealm.LocalPackagePath;
-        
-        await client.SendData(new LoadPacket
+        var realmName = packet.Link?.RealmName;
+
+        if (string.IsNullOrEmpty(realmName))
         {
-            LevelName = path
-        });
+            _logger.LogWarning("Client tried to admit themselves to an invalid realm name! Moving them to the default realm.");
+            realmName = RealmManager.Default.Name;
+        }
+        
+        var realm = await RealmManager.GetOrLoadRealm(realmName);
+        await realm.BeginClientAdmit(client);
     }
     
     /// <summary>
@@ -215,11 +215,11 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         
         client.SetState(newState);
         _logger.LogInformation("Client {ClientName} is now in state {State}", client.Id, newState);
-        
-        if (newState == ClientState.Loaded)
+
+        await client.CurrentRealm.DispatchOnRealmThread(async (realm) =>
         {
-            await RealmManager.Default.SpawnPlayer(client, _rules);
-        }
+            await realm.SpawnPlayer(client, _rules);
+        });
     }
     
     /// <summary>
@@ -235,7 +235,6 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             client.Id);
         
         // Find the object
-        // TODO: Make this client realm aware once we implement multi-realm simulations.
         var entity = RealmManager
             .Default
             .EntityManager

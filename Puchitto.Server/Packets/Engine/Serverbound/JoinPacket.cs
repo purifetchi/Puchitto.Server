@@ -1,4 +1,5 @@
 using Puchitto.Server.Packets.Serialization;
+using Puchitto.Server.Realms;
 
 namespace Puchitto.Server.Packets.Engine.Serverbound;
 
@@ -8,6 +9,8 @@ namespace Puchitto.Server.Packets.Engine.Serverbound;
 public struct JoinPacket : IPuchittoPacket
 {
     public int PacketId => (int)InternalPacketTypes.Join;
+    
+    public RealmLink? Link { get; set; }
 
     public JoinPacket()
     {
@@ -19,5 +22,6 @@ public struct JoinPacket : IPuchittoPacket
 
     public void Deserialize(ref NetworkReader reader)
     {
+        Link = RealmLink.TryParse(reader.ReadString());
     }
 }

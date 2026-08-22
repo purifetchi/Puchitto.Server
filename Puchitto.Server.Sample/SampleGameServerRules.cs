@@ -1,37 +1,25 @@
 ﻿using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
-using Puchitto.Server.Management;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Realms;
 using Puchitto.Server.Realms.Definitions;
 
 namespace Puchitto.Server.Sample;
 
-public class SampleGameServerRules : IGameServerRules
+public class SampleGameServerRules : AbstractGameServerRules
 {
-    public string Name => "DummyGame";
+    public override string Name => "DummyGame";
 
-    public IPuchittoSystemsProvider PuchittoSystemsProvider { get; set; } = null!;
-
-    public IReadOnlyList<RealmDefinition> GetRealmDefinitions()
+    public override void OnReady()
     {
-        return
-        [
-            new RealmDefinition(true, "../../../../../personal-website/prefetcher.net/public/game/cooked.alf", "/game/cooked.alf")
-        ];
+        RealmRegistry.AddRealm("flatland", new RealmDefinition("flatland", "flatland.alf", Flags: RealmFlags.Default));
     }
-    
-    public void RegisterPackets(PacketRegistry registry)
+
+    public override void RegisterPackets(PacketRegistry registry)
     {
         registry.RegisterHandler<RequestWalkPacket>(OnRequestWalk);
     }
-
-    public void RegisterEntities(EntityFactory entityFactory)
-    {
-        
-    }
-    
 
     private async Task OnRequestWalk(RequestWalkPacket packet, Client client)
     {
@@ -41,7 +29,7 @@ public class SampleGameServerRules : IGameServerRules
             .Default
             .EntityManager
             .Entities
-            .FirstOrDefault(ent => ent.Owner?.Id == client.Id && ent is AtaEntity);
+            .FirstOrDefault(ent => ent.Owner?.Id == client.Id && ent is UnknownEntity);
 
         if (entity == null)
         {
@@ -68,14 +56,9 @@ public class SampleGameServerRules : IGameServerRules
         }
     }
 
-    public string GetPackagePath()
+    public override BaseEntity CreateEntityForClient(Realm realm, Client client)
     {
-        return "/game/cooked.alf";
-    }
-
-    public BaseEntity CreateEntityForClient(Realm realm)
-    {
-        return new AtaEntity
+        return new UnknownEntity
         {
             Id = PuchittoSystemsProvider.RealmManager.Default.IdAllocator.GetNextId()
         };

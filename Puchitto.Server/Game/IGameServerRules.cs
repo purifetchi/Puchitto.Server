@@ -1,4 +1,5 @@
-﻿using Puchitto.Server.Game.Entities;
+﻿using Puchitto.Server.Clients;
+using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Realms;
@@ -20,13 +21,17 @@ public interface IGameServerRules
     /// The systems provider.
     /// </summary>
     IPuchittoSystemsProvider PuchittoSystemsProvider { get; set; }
+    
+    /// <summary>
+    /// The realm registry for this game.
+    /// </summary>
+    IRealmRegistry RealmRegistry { get; }
 
     /// <summary>
-    /// Gets the list of realm definitions.
+    /// Called when the server is ready.
     /// </summary>
-    /// <returns>The list of realm definitions for this game.</returns>
-    IReadOnlyList<RealmDefinition> GetRealmDefinitions();
-
+    void OnReady();
+    
     /// <summary>
     /// Registers custom packets.
     /// </summary>
@@ -45,8 +50,11 @@ public interface IGameServerRules
     /// <param name="realm">
     /// The realm we're creating the entity in.
     /// </param>
+    /// <param name="client">
+    /// The client for whom we're creating the entity.
+    /// </param>
     /// <returns>
     /// The created entity.
     /// </returns>
-    BaseEntity CreateEntityForClient(Realm realm);
+    BaseEntity CreateEntityForClient(Realm realm, Client client);
 }
