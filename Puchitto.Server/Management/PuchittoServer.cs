@@ -65,7 +65,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// <summary>
     /// The packet processor.
     /// </summary>
-    private readonly PacketProcessor _packetProcessor;
+    private readonly PacketDispatcher _packetDispatcher;
 
     /// <summary>
     /// The game server rules.
@@ -99,9 +99,9 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         _logger = MakeLogger<PuchittoServer<TGameServerRules>>();
 
         Registry = new PacketRegistry();
-        _packetProcessor = new PacketProcessor(
+        _packetDispatcher = new PacketDispatcher(
             Registry,
-            MakeLogger<PacketProcessor>()
+            MakeLogger<PacketDispatcher>()
         );
         
         _webSocketListener = new WebSocketListener(
@@ -114,7 +114,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
 
         ClientManager = new ClientManager(
             _rules,
-            _packetProcessor,
+            _packetDispatcher,
             MakeLogger<ClientManager>()
         );
 

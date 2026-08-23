@@ -5,28 +5,28 @@ using Puchitto.Server.Packets.Serialization;
 namespace Puchitto.Server.Packets;
 
 /// <summary>
-/// The packet processor.
+/// The dispatcher for incoming packets.
 /// </summary>
-public class PacketProcessor
+public class PacketDispatcher
 {
     /// <summary>
     /// The packet registry.
     /// </summary>
-    public PacketRegistry Registry { get;  }
+    private PacketRegistry Registry { get; }
 
     /// <summary>
     /// The logger.
     /// </summary>
-    private readonly ILogger<PacketProcessor> _logger;
+    private readonly ILogger<PacketDispatcher> _logger;
 
     /// <summary>
     /// Constructs a new packet processor.
     /// </summary>
     /// <param name="registry">The associated registry.</param>
     /// <param name="logger">The logger.</param>
-    public PacketProcessor(
+    public PacketDispatcher(
         PacketRegistry registry,
-        ILogger<PacketProcessor> logger)
+        ILogger<PacketDispatcher> logger)
     {
         Registry = registry;
         _logger = logger;
@@ -37,7 +37,7 @@ public class PacketProcessor
     /// </summary>
     /// <param name="client">The client.</param>
     /// <param name="data">The data.</param>
-    public async Task ProcessIncomingPacket(
+    public async Task DispatchIncomingPacket(
         Client client,
         ArraySegment<byte> data)
     {
@@ -78,6 +78,27 @@ public class PacketProcessor
         }
         
         var slice = data.Slice(PacketEnvelope.EnvelopeSize, envelope.Size);
-        await Registry.ExecuteHandler(envelope.OpCode, slice, client);
+        
+        // Get the dispatch type of this packet.
+        var dispatchType = Registry.GetDispatchTypeForPacketId(envelope.OpCode);
+        switch (dispatchType)
+        {
+            case PacketDispatchType.Realm:
+                await client.CurrentRealm.EnqueueClientMessage(envelope.OpCode, client, slice);
+                break;
+            
+            // TODO: We might want a separate purely-server message pump.
+            //       For now we dispatch it as it arrives.
+            case PacketDispatchType.Server:
+                await Registry.ExecuteHandler(envelope.OpCode, slice, client);
+                break;
+            
+            default:
+                _logger.LogWarning("Client {Id} sent a packet with an invalid dispatch type '{DispatchType}'!",
+                    client.Id,
+                    dispatchType);
+                await client.Disconnect();
+                break;
+        }
     }
 }

@@ -1,4 +1,5 @@
 using Puchitto.Server.Clients;
+using Puchitto.Server.Realms;
 
 namespace Puchitto.Server.Packets;
 
@@ -24,6 +25,27 @@ public class PacketRegistry
         
         var dummy = new TPacket();
         _handlers.Add(dummy.PacketId, packetHandler); 
+    }
+
+    /// <summary>
+    /// Registers a packet handler that's handled by the realm's inbox.
+    /// </summary>
+    /// <param name="handler">
+    /// The handler action.
+    /// </param>
+    /// <typeparam name="TPacket">
+    /// The type of the packet.
+    /// </typeparam>
+    public void RegisterRealmHandler<TPacket>(Func<TPacket, Realm, Client, Task> handler)
+        where TPacket : IPuchittoPacket, new()
+    {
+        var packetHandler = new RealmPacketHandler<TPacket>()
+        {
+            Handler = handler
+        };
+        
+        var dummy = new TPacket();
+        _handlers.Add(dummy.PacketId, packetHandler);
     }
 
     /// <summary>
@@ -55,5 +77,15 @@ public class PacketRegistry
     public bool PacketExists(int packetId)
     {
         return _handlers.ContainsKey(packetId);
+    }
+    
+    /// <summary>
+    /// Gets the dispatch type for a packet id.
+    /// </summary>
+    /// <param name="packetId">The packet's id.</param>
+    /// <returns>Its dispatch type.</returns>
+    public PacketDispatchType GetDispatchTypeForPacketId(int packetId)
+    {
+        return _handlers[packetId].DispatchType;
     }
 }

@@ -1,24 +1,23 @@
 using Puchitto.Server.Clients;
 using Puchitto.Server.Packets.Serialization;
+using Puchitto.Server.Realms;
 
 namespace Puchitto.Server.Packets;
 
 /// <summary>
-/// The simple packet handler.
+/// Handles a realm packet.
 /// </summary>
-/// <typeparam name="TPacket">
-/// The type of the packet.
-/// </typeparam>
-public class SimplePacketHandler<TPacket> : IPacketHandler
+/// <typeparam name="TPacket">The type of the packet.</typeparam>
+public class RealmPacketHandler<TPacket> : IPacketHandler
     where TPacket : IPuchittoPacket, new()
 {
     /// <inheritdoc />
-    public PacketDispatchType DispatchType => PacketDispatchType.Server;
-
+    public PacketDispatchType DispatchType => PacketDispatchType.Realm;
+    
     /// <summary>
     /// The actual handler.
     /// </summary>
-    public Func<TPacket, Client, Task> Handler { get; set; } = null!;
+    public Func<TPacket, Realm, Client, Task> Handler { get; set; } = null!;
     
     /// <inheritdoc />
     public async Task HandlePacket(ArraySegment<byte> data, Client client)
@@ -28,6 +27,6 @@ public class SimplePacketHandler<TPacket> : IPacketHandler
         
         packet.Deserialize(ref reader);
         
-        await Handler(packet, client);
+        await Handler(packet, client.CurrentRealm, client);
     }
 }

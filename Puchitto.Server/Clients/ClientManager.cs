@@ -49,7 +49,7 @@ public class ClientManager
     /// <summary>
     /// The packet processor.
     /// </summary>
-    private readonly PacketProcessor _packetProcessor;
+    private readonly PacketDispatcher _packetDispatcher;
     
     /// <summary>
     /// The game server rules.
@@ -72,7 +72,7 @@ public class ClientManager
     /// <param name="gameServerRules">
     /// The game server rules.
     /// </param>
-    /// <param name="packetProcessor">
+    /// <param name="packetDispatcher">
     /// The packet processor.
     /// </param>
     /// <param name="logger">
@@ -80,11 +80,11 @@ public class ClientManager
     /// </param>
     public ClientManager(
         IGameServerRules gameServerRules,
-        PacketProcessor packetProcessor,
+        PacketDispatcher packetDispatcher,
         ILogger<ClientManager> logger)
     {
         _gameServerRules = gameServerRules;
-        _packetProcessor = packetProcessor;
+        _packetDispatcher = packetDispatcher;
         _logger = logger;
     }
 
@@ -133,7 +133,7 @@ public class ClientManager
         _clientSemaphore.Release();
 
         client.Connection.OnIncomingMessage = async (data) =>
-            await _packetProcessor.ProcessIncomingPacket(client, data);
+            await _packetDispatcher.DispatchIncomingPacket(client, data);
 
         client.Connection.OnConnectionClosed = async () =>
             await DisconnectClient(client);

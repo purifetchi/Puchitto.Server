@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Data.Alf;
@@ -13,16 +14,11 @@ namespace Puchitto.Server.Realms;
 public class RealmManager
 {
     /// <summary>
-    /// The list of loaded realms.
-    /// </summary>
-    public IReadOnlyList<Realm> Realms => _realms;
-
-    /// <summary>
     /// Gets the default realm.
     /// </summary>
     public Realm Default { get; private set; } = null!;
     
-    private List<Realm> _realms = [];
+    private readonly ConcurrentDictionary<string, RealmSlot> _realms = new();
     private readonly IPuchittoSystemsProvider _systemsProvider;
     private readonly IGameServerRules _rules;
     
@@ -44,11 +40,15 @@ public class RealmManager
     public async Task LoadRealms()
     {
         var defs = _rules.RealmRegistry.GetRealmDefinitions();
-        var realmTasks = defs.Select(CreateRealm);
-        var realms = await Task.WhenAll(realmTasks);
+        var realmTasks = defs
+            .Where(d => d.Flags.HasFlag(RealmFlags.Persistent))
+            .Select(BeginRealmLoad);
+        
+        await Task.WhenAll(realmTasks);
 
-        _realms = [.. realms];
-        Default = _realms.First(r => r.Flags.HasFlag(RealmFlags.Default));
+        Default = _realms.First(r => r.Value.Realm.Flags.HasFlag(RealmFlags.Default))
+            .Value
+            .Realm;
         
         var logger = _systemsProvider.MakeLogger<RealmManager>();
         logger.LogInformation("Loaded {Count} realm(s).", _realms.Count);
@@ -62,9 +62,47 @@ public class RealmManager
     public async Task<Realm> GetOrLoadRealm(string name)
     {
         // TODO: Check if we have this realm loaded.
-        return Realms.First(r => r.Name == name);
+        return _realms.Values.First(r => r.Realm.Name == name).Realm;
     }
 
+    /// <summary>
+    /// Begins loading a singular realm.
+    /// </summary>
+    /// <param name="definition">The realm's definition</param>
+    private async Task BeginRealmLoad(RealmDefinition definition)
+    {
+        var realm = await CreateRealm(definition);
+        var cts = new CancellationTokenSource();
+        var cancellationToken = cts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            await RealmTickLoop(realm, cancellationToken);
+        }, cancellationToken);
+        
+        _realms.TryAdd(definition.Name, new RealmSlot(RealmState.Loaded, realm, cts));
+    }
+
+    /// <summary>
+    /// Starts ticking a realm.
+    /// </summary>
+    /// <param name="realm">The realm.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    private async Task RealmTickLoop(Realm realm, CancellationToken cancellationToken)
+    {
+        const float tps = 20.0f;
+        const float delay = 1 / tps;
+
+        var timeSpan = TimeSpan.FromSeconds(delay);
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await realm.Tick();
+            
+            // TODO: This should be configurable.
+            await Task.Delay(timeSpan, cancellationToken);
+        }
+    }
+    
     /// <summary>
     /// Loads a single realm from the realm definition.
     /// </summary>

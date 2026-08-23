@@ -8,6 +8,11 @@ namespace Puchitto.Server.Packets;
 public interface IPacketHandler
 {
     /// <summary>
+    /// The dispatch type of this packet handler.
+    /// </summary>
+    PacketDispatchType DispatchType { get; }
+    
+    /// <summary>
     /// Handles a packet.
     /// </summary>
     /// <param name="data">

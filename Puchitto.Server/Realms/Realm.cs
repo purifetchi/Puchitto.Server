@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Threading.Channels;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
@@ -17,6 +18,11 @@ public class Realm
     /// The type that is used as a thread action callback dispatch.
     /// </summary>
     public delegate Task RealmThreadActionCallback(Realm realm);
+
+    /// <summary>
+    /// A definition of a client message dispatched on the realm.
+    /// </summary>
+    private readonly record struct RealmClientMessage(int OpCode, Client Client, byte[] Payload);
     
     /// <summary>
     /// The name of this realm.
@@ -72,7 +78,12 @@ public class Realm
     /// The thread executor channel.
     /// </summary>
     private readonly Channel<RealmThreadActionCallback> _threadExecutorChannel;
-
+    
+    /// <summary>
+    /// The client message channel for this realm.
+    /// </summary>
+    private readonly Channel<RealmClientMessage> _clientMessageChannel;
+    
     /// <summary>
     /// Constructs a new Realm.
     /// </summary>
@@ -92,6 +103,11 @@ public class Realm
             puchittoSystemsProvider.MakeLogger<EntityManager>());
 
         _threadExecutorChannel = Channel.CreateUnbounded<RealmThreadActionCallback>();
+        _clientMessageChannel = Channel.CreateBounded<RealmClientMessage>(new BoundedChannelOptions(1024)
+        {
+            SingleReader = true,
+            SingleWriter = false
+        });
         
         ParseEntities(levelDefinition);
         
@@ -111,6 +127,24 @@ public class Realm
     }
 
     /// <summary>
+    /// Enqueues a client message for processing on the realm thread.
+    /// </summary>
+    /// <param name="opCode">The opcode of the message.</param>
+    /// <param name="client">The client.</param>
+    /// <param name="slice">The array segment containing the payload.</param>
+    public async Task EnqueueClientMessage(
+        int opCode,
+        Client client,
+        ArraySegment<byte> slice)
+    {
+        // Rent an array
+        var array = ArrayPool<byte>.Shared.Rent(slice.Count);
+        slice.CopyTo(array);
+        
+        await _clientMessageChannel.Writer.WriteAsync(new RealmClientMessage(opCode, client, array));
+    }
+
+    /// <summary>
     /// Ticks this realm.
     /// </summary>
     public async Task Tick()
@@ -120,8 +154,15 @@ public class Realm
         {
             await action(this);
         }
+
+        // Handle all the incoming client messages.
+        while (_clientMessageChannel.Reader.TryRead(out var message))
+        {
+            await SystemsProvider.Registry.ExecuteHandler(message.OpCode, message.Payload, message.Client);
+            ArrayPool<byte>.Shared.Return(message.Payload);
+        }
         
-        
+        // TODO: Tick entities.
     }
 
     /// <summary>
