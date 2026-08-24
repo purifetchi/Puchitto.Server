@@ -121,9 +121,34 @@ public class Realm
     /// <param name="action">
     /// The action to run.
     /// </param>
-    public async Task DispatchOnRealmThread(RealmThreadActionCallback action)
+    public void DispatchOnRealmThread(RealmThreadActionCallback action)
     {
-        await _threadExecutorChannel.Writer.WriteAsync(action);
+        _threadExecutorChannel.Writer.TryWrite(action);
+    }
+
+    /// <summary>
+    /// Gets an entity by its id on this realm.
+    /// </summary>
+    /// <param name="id">The ID.</param>
+    /// <typeparam name="TEntity">The entity.</typeparam>
+    /// <returns>The entity that has this id.</returns>
+    public TEntity? GetEntityById<TEntity>(int id)
+        where TEntity : BaseEntity
+    {
+        return EntityManager.GetEntityById<TEntity>(id);
+    }
+
+    /// <summary>
+    /// Returns the first found entity for a given client.
+    /// </summary>
+    /// <param name="client">The client.</param>
+    /// <typeparam name="TEntity">The entity,</typeparam>
+    /// <returns>The entity that is associated with this player.</returns>
+    public TEntity? PlayerEntityOf<TEntity>(Client client)
+        where TEntity : BaseEntity
+    {
+        var entity = EntityManager.Entities;
+        return entity.FirstOrDefault(e => e is TEntity && e.Owner == client) as TEntity;
     }
 
     /// <summary>
@@ -166,10 +191,24 @@ public class Realm
     }
 
     /// <summary>
+    /// Posts an admission into this realm for a client.
+    /// </summary>
+    /// <param name="client">The client.</param>
+    /// <param name="query">The query.</param>
+    public void PostAdmit(Client client, string query)
+    {
+        // TODO: Make use of the query.
+        DispatchOnRealmThread(async realm =>
+        {
+            await realm.BeginClientAdmit(client);
+        });
+    }
+
+    /// <summary>
     /// Begins admitting a client into this realm.
     /// </summary>
     /// <param name="client">The client.</param>
-    public async Task BeginClientAdmit(Client client)
+    private async Task BeginClientAdmit(Client client)
     {
         client.CurrentRealm = this;
         
@@ -194,6 +233,29 @@ public class Realm
             
             EntityManager.AddEntity(ent);
         }
+    }
+
+    /// <summary>
+    /// Removes a client from the realm.
+    /// </summary>
+    /// <param name="client">
+    /// The client to remove.
+    /// </param>
+    public async Task RemoveClient(Client client)
+    {
+        // TODO: Are we sure players wont have more than one entity?
+        var playerEntity = PlayerEntityOf<BaseEntity>(client);
+        if (playerEntity is not null)
+        {
+            await EntityManager.RemoveAndDespawn(playerEntity);
+        }
+        
+        if (OnClientLeftRealm is not null)
+        {
+            await OnClientLeftRealm.Invoke(client);
+        }
+
+        client.CurrentRealm = null;
     }
     
     /// <summary>

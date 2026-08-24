@@ -24,7 +24,7 @@ public class Client
     /// <summary>
     /// The current realm the player is in.
     /// </summary>
-    public Realm CurrentRealm { get; set; }
+    public Realm? CurrentRealm { get; set; }
     
     /// <summary>
     /// Sets the last time a KeepAlive packet has been received.

@@ -203,14 +203,9 @@ public abstract class BaseEntity
     /// <param name="sender">The sender client.</param>
     public void HandleRpc(string name, Client sender)
     {
-        // NOTE: We lock here because we don't want multiple clients calling an RPC overwriting the sender field.
-        //       Is this really the best solution?
-        lock (_rpcLock)
-        {
-            _environment.Set("sender", sender);
-            RunAntics(AnticsOn.Rpc, name);
-            _environment.Unset("sender");
-        }
+        _environment.Set("sender", sender);
+        RunAntics(AnticsOn.Rpc, name);
+        _environment.Unset("sender");
     }
 
     /// <summary>

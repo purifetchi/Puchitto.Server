@@ -162,12 +162,12 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// </summary>
     private void RegisterInternalHandlers()
     {
-        _rules.RegisterPackets(Registry);
-        
         Registry.RegisterHandler<JoinPacket>(OnJoin);
-        Registry.RegisterHandler<LoadStatePacket>(OnLoadState);
-        Registry.RegisterHandler<MiniAnticsRpcPacket>(OnMiniAnticsRpc);
         Registry.RegisterHandler<KeepAlivePacket>(OnKeepAlive);
+        Registry.RegisterRealmHandler<LoadStatePacket>(OnLoadState);
+        Registry.RegisterRealmHandler<MiniAnticsRpcPacket>(OnMiniAnticsRpc);
+        
+        _rules.RegisterPackets(Registry);
     }
 
     /// <summary>
@@ -189,57 +189,46 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     private async Task OnJoin(JoinPacket packet, Client client)
     {
         _logger.LogInformation("Client {Id} sent us a join packet!", client.Id);
-
-        var realmName = packet.Link?.RealmName;
-
-        if (string.IsNullOrEmpty(realmName))
-        {
-            _logger.LogWarning("Client tried to admit themselves to an invalid realm name! Moving them to the default realm.");
-            realmName = RealmManager.Default.Name;
-        }
-        
-        var realm = await RealmManager.GetOrLoadRealm(realmName);
-        await realm.BeginClientAdmit(client);
+        await RealmManager.TransferClient(client, packet.Link);
     }
     
     /// <summary>
     /// Executed when the client sends a load state packet.
     /// </summary>
     /// <param name="packet">The packet.</param>
+    /// <param name="realm">The realm.</param>
     /// <param name="client">The client sending it.</param>
-    private async Task OnLoadState(LoadStatePacket packet, Client client)
+    private async Task OnLoadState(LoadStatePacket packet, Realm realm, Client client)
     {
         var newState = packet.State is LoadState.Started
             ? ClientState.Loading
             : ClientState.Loaded;
         
         client.SetState(newState);
-        _logger.LogInformation("Client {ClientName} is now in state {State}", client.Id, newState);
+        _logger.LogInformation("Client {ClientName} is now in state {State} for realm {RealmName}",
+            client.Id,
+            newState,
+            realm.Name);
 
-        await client.CurrentRealm.DispatchOnRealmThread(async (realm) =>
-        {
-            await realm.SpawnPlayer(client, _rules);
-        });
+        await realm.SpawnPlayer(client, _rules);
     }
     
     /// <summary>
     /// Executed when a client invokes a MiniAntics rpc.
     /// </summary>
     /// <param name="packet">The packet.</param>
+    /// <param name="realm">The realm.</param>
     /// <param name="client">The client sending it.</param>
-    private async Task OnMiniAnticsRpc(MiniAnticsRpcPacket packet, Client client)
+    private async Task OnMiniAnticsRpc(MiniAnticsRpcPacket packet, Realm realm, Client client)
     {
-        _logger.LogInformation("Object {Id} just got a MiniAntics RPC {Name} from client {Client}",
+        _logger.LogInformation("Object {Id} (in realm {RealmName}) just got a MiniAntics RPC {Name} from client {Client}",
             packet.ObjectId,
+            realm.Name,
             packet.Name,
             client.Id);
         
         // Find the object
-        var entity = RealmManager
-            .Default
-            .EntityManager
-            .GetEntityById<BaseEntity>(packet.ObjectId);
-        
+        var entity = realm.GetEntityById<BaseEntity>(packet.ObjectId);
         entity?.HandleRpc(packet.Name, client);
     }
     

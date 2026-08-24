@@ -10,7 +10,7 @@ public struct JoinPacket : IPuchittoPacket
 {
     public int PacketId => (int)InternalPacketTypes.Join;
     
-    public RealmLink? Link { get; set; }
+    public RealmLink Link { get; set; }
 
     public JoinPacket()
     {

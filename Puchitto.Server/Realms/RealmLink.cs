@@ -10,17 +10,18 @@ public record RealmLink(
     string QueryPath)
 {
     /// <summary>
-    /// Tries to parse a link into a realm link.
+    /// Parses a link into a realm link.
     /// </summary>
     /// <param name="link">The link.</param>
     /// <returns>The realm link if it was succesfully deserialized.</returns>
-    public static RealmLink? TryParse(string link)
+    public static RealmLink TryParse(string link)
     {
         var uri = new Uri(link);
 
         if (uri.Scheme != "realm")
         {
-            return null;
+            // TODO: Better exception.
+            throw new InvalidOperationException("Invalid realm link");
         }
 
         var realmName = uri.Host;
