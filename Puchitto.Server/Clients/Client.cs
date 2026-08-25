@@ -189,7 +189,7 @@ public class Client
     {
         lock (_stateLock)
         {
-            if (_state is not ClientState.Established and ClientState.Present)
+            if (_state is not (ClientState.Established or ClientState.Present))
             {
                 return false;
             }
