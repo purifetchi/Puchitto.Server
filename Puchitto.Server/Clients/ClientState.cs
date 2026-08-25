@@ -11,11 +11,6 @@ public enum ClientState
     Established,
     
     /// <summary>
-    /// The client is connecting.
-    /// </summary>
-    Connecting,
-    
-    /// <summary>
     /// The client is loading.
     /// </summary>
     Loading,

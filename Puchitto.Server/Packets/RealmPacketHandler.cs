@@ -27,6 +27,6 @@ public class RealmPacketHandler<TPacket> : IPacketHandler
         
         packet.Deserialize(ref reader);
         
-        await Handler(packet, client.CurrentRealm, client);
+        await Handler(packet, client.CurrentRealm!, client);
     }
 }

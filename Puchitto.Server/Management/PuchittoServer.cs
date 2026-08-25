@@ -132,6 +132,8 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// </summary>
     public async Task Host(CancellationToken cancellationToken = default)
     {
+        _rules.OnReady();
+        
         await RealmManager.LoadRealms();
         
         _webSocketListener.OnClientConnected =
@@ -210,7 +212,10 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             newState,
             realm.Name);
 
-        await realm.SpawnPlayer(client, _rules);
+        if (newState == ClientState.Loaded)
+        {
+            await realm.SpawnPlayer(client, _rules);
+        }
     }
     
     /// <summary>

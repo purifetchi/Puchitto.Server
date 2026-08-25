@@ -74,15 +74,18 @@ public class RealmManager
     /// <param name="link">The realm.</param>
     public async Task TransferClient(Client client, RealmLink link)
     {
-        // TODO: This should be only set if we are not loading already.
-        client.SetState(ClientState.Loading);
+        var source = client.CurrentRealm;
+        if (!client.TryBeginRealmTransfer())
+        {
+            return;
+        }
+
         var destination = await GetOrLoadRealm(link.RealmName);
 
         // TODO: Realms should have a player limit. Every player should create a registration within the realm
         //       that tracks whether they can join.
         
         // If we have no current realm, we can admit to the new realm already. 
-        var source = client.CurrentRealm;
         if (source == null)
         {
             destination.PostAdmit(client, link.QueryPath);

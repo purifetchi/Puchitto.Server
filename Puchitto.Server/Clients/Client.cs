@@ -46,6 +46,11 @@ public class Client
     /// </summary>
     private ClientState _state = ClientState.Established;
     
+    /// <summary>
+    /// The lock for modifying the client state.
+    /// </summary>
+    private readonly Lock _stateLock = new Lock();
+    
     public Client(
         Guid id,
         ClientConnection connection)
@@ -175,12 +180,36 @@ public class Client
     }
 
     /// <summary>
+    /// Tries to begin the realm state transfer.
+    /// </summary>
+    /// <returns>
+    /// Whether it was succesful.
+    /// </returns>
+    public bool TryBeginRealmTransfer()
+    {
+        lock (_stateLock)
+        {
+            if (_state is not ClientState.Established and ClientState.Present)
+            {
+                return false;
+            }
+
+            _state = ClientState.Loading;
+            CurrentRealm = null;
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Sets the current client state.
     /// </summary>
     /// <param name="state">The state.</param>
     public void SetState(ClientState state)
     {
-        Interlocked.Exchange(ref _state, state);
+        lock (_stateLock)
+        {
+            _state = state;
+        }
     }
 
     /// <summary>

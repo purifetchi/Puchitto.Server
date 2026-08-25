@@ -88,7 +88,7 @@ public class Realm
     /// Constructs a new Realm.
     /// </summary>
     /// <param name="puchittoSystemsProvider">
-    /// The systems provider.
+    /// The systems' provider.
     /// </param>
     public Realm(
         IPuchittoSystemsProvider puchittoSystemsProvider,
@@ -213,7 +213,6 @@ public class Realm
         client.CurrentRealm = this;
         
         var downloadPath = _definition.RemotePackagePath ?? _definition.LocalPackagePath;
-        client.SetState(ClientState.Connecting);
         
         await client.SendData(new LoadPacket
         {
@@ -254,8 +253,6 @@ public class Realm
         {
             await OnClientLeftRealm.Invoke(client);
         }
-
-        client.CurrentRealm = null;
     }
     
     /// <summary>
@@ -265,6 +262,7 @@ public class Realm
     /// <param name="rules">The rules.</param>
     public async Task SpawnPlayer(Client client, IGameServerRules rules)
     {
+        client.SetState(ClientState.Present);
         client.CurrentRealm = this;
 
         await EntityManager.SpawnMissingEntitiesFor(client);

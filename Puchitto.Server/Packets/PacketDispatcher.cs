@@ -84,7 +84,12 @@ public class PacketDispatcher
         switch (dispatchType)
         {
             case PacketDispatchType.Realm:
-                await client.CurrentRealm.EnqueueClientMessage(envelope.OpCode, client, slice);
+                if (client.CurrentRealm is not { } realm)
+                {
+                    break;
+                }
+                
+                await realm.EnqueueClientMessage(envelope.OpCode, client, slice);
                 break;
             
             // TODO: We might want a separate purely-server message pump.
