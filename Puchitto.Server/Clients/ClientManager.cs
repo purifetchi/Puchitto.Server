@@ -3,6 +3,7 @@ using Puchitto.Server.Game;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Engine.Bidirectional;
 using Puchitto.Server.Packets.Engine.Clientbound;
+using Puchitto.Server.Realms;
 
 namespace Puchitto.Server.Clients;
 
@@ -52,6 +53,11 @@ public class ClientManager
     private readonly PacketDispatcher _packetDispatcher;
     
     /// <summary>
+    /// The realm manager.
+    /// </summary>
+    private readonly RealmManager _realmManager;
+    
+    /// <summary>
     /// The game server rules.
     /// </summary>
     private readonly IGameServerRules _gameServerRules;
@@ -75,16 +81,21 @@ public class ClientManager
     /// <param name="packetDispatcher">
     /// The packet processor.
     /// </param>
+    /// <param name="realmManager">
+    /// The realm manager.
+    /// </param>
     /// <param name="logger">
     /// The logger.
     /// </param>
     public ClientManager(
         IGameServerRules gameServerRules,
         PacketDispatcher packetDispatcher,
+        RealmManager realmManager,
         ILogger<ClientManager> logger)
     {
         _gameServerRules = gameServerRules;
         _packetDispatcher = packetDispatcher;
+        _realmManager = realmManager;
         _logger = logger;
     }
 
@@ -178,7 +189,9 @@ public class ClientManager
     {
         _logger.LogInformation("Sending handshake to client of ID {Id}", client.Id);
 
-        var hello = new HelloPacket("Puchitto.Server", _gameServerRules.Name);
+        var defaultRealm = _realmManager.Default;
+        var link = new RealmLink(defaultRealm.Name, string.Empty);
+        var hello = new HelloPacket("Puchitto.Server", _gameServerRules.Name, link);
         await client.SendData(hello);
     }
 }

@@ -1,9 +1,11 @@
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
 using Puchitto.Server.Management;
+using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Engine.Clientbound;
 using Puchitto.Server.Realms.Definitions;
 
@@ -12,7 +14,7 @@ namespace Puchitto.Server.Realms;
 /// <summary>
 /// A single realm within a Puchitto server.
 /// </summary>
-public class Realm
+public class Realm : IClientGroupProvider
 {
     /// <summary>
     /// The type that is used as a thread action callback dispatch.
@@ -23,6 +25,9 @@ public class Realm
     /// A definition of a client message dispatched on the realm.
     /// </summary>
     private readonly record struct RealmClientMessage(int OpCode, Client Client, byte[] Payload);
+
+    /// <inheritdoc />
+    public IReadOnlyCollection<Client> Clients => _clients;
     
     /// <summary>
     /// The name of this realm.
@@ -83,6 +88,11 @@ public class Realm
     /// The client message channel for this realm.
     /// </summary>
     private readonly Channel<RealmClientMessage> _clientMessageChannel;
+
+    /// <summary>
+    /// The list of clients currently connected to the realm.
+    /// </summary>
+    private List<Client> _clients = new();
     
     /// <summary>
     /// Constructs a new Realm.
@@ -99,7 +109,7 @@ public class Realm
         
         SystemsProvider = puchittoSystemsProvider;
         EntityManager = new EntityManager(
-            puchittoSystemsProvider.ClientManager,
+            this,
             puchittoSystemsProvider.MakeLogger<EntityManager>());
 
         _threadExecutorChannel = Channel.CreateUnbounded<RealmThreadActionCallback>();
@@ -124,6 +134,33 @@ public class Realm
     public void DispatchOnRealmThread(RealmThreadActionCallback action)
     {
         _threadExecutorChannel.Writer.TryWrite(action);
+    }
+
+    /// <inheritdoc />
+    public async Task SendToClients<TPacket>(TPacket packet, Client? excluding = null)
+        where TPacket: struct, IPuchittoPacket
+    {
+        foreach (var client in _clients)
+        {
+            if (client == excluding || client.State is not ClientState.Present)
+            {
+                continue;
+            }
+            
+            await client.SendData(packet);
+        }
+    }
+
+    /// <summary>
+    /// Tries to reserve a slot for the client.
+    /// </summary>
+    /// <param name="client">The client.</param>
+    /// <returns>Whether we were able to reserve a slot.</returns>
+    public bool TryReserveSlot(Client client)
+    {
+        // TODO: Realm slot limits.
+        _clients.Add(client);
+        return true;
     }
 
     /// <summary>
@@ -242,12 +279,8 @@ public class Realm
     /// </param>
     public async Task RemoveClient(Client client)
     {
-        // TODO: Are we sure players wont have more than one entity?
-        var playerEntity = PlayerEntityOf<BaseEntity>(client);
-        if (playerEntity is not null)
-        {
-            await EntityManager.RemoveAndDespawn(playerEntity);
-        }
+        _clients.Remove(client);
+        await EntityManager.RemoveClientEntities(client);
         
         if (OnClientLeftRealm is not null)
         {

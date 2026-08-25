@@ -29,4 +29,17 @@ public record RealmLink(
         
         return new RealmLink(realmName, query);
     }
+
+    /// <summary>
+    /// Turns this realm link into a URI string.
+    /// </summary>
+    /// <returns>The URI string.</returns>
+    public string ToUriString()
+    {
+        var query = !string.IsNullOrWhiteSpace(QueryPath)
+            ? $"?{QueryPath}"
+            : string.Empty;
+        
+        return $"realm://{RealmName}{query}";
+    }
 }

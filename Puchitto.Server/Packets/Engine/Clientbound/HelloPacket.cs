@@ -1,11 +1,12 @@
 using Puchitto.Server.Packets.Serialization;
+using Puchitto.Server.Realms;
 
 namespace Puchitto.Server.Packets.Engine.Clientbound;
 
 /// <summary>
 /// A Puchitto hello packet.
 /// </summary>
-public struct HelloPacket(string branding, string gameRulesName) : IPuchittoPacket
+public struct HelloPacket(string branding, string gameRulesName, RealmLink link) : IPuchittoPacket
 {
     /// <inheritdoc />
     public int PacketId => (int)InternalPacketTypes.Hello;
@@ -19,12 +20,18 @@ public struct HelloPacket(string branding, string gameRulesName) : IPuchittoPack
     /// The game rules name.
     /// </summary>
     private string GameRulesName { get; set; } = gameRulesName;
+
+    /// <summary>
+    /// The default realm location.
+    /// </summary>
+    private string DefaultRealmLocation { get; set; } = link.ToUriString();
     
     /// <inheritdoc />
     public void Serialize(ref NetworkWriter writer)
     {
         writer.WriteString(Branding);
         writer.WriteString(GameRulesName);
+        writer.WriteString(DefaultRealmLocation);
     }
 
     /// <inheritdoc />

@@ -17,17 +17,12 @@ public class EntityManager
     /// <summary>
     /// The client manager.
     /// </summary>
-    private readonly ClientManager _clientManager;
+    private readonly IClientGroupProvider _clientGroupProvider;
     
     /// <summary>
     /// The logger.
     /// </summary>
     private readonly ILogger<EntityManager> _logger;
-    
-    /// <summary>
-    /// The entity lock.
-    /// </summary>
-    private readonly Lock _entityLock = new();
     
     /// <summary>
     /// The list of entities.
@@ -38,13 +33,11 @@ public class EntityManager
     /// Constructs a new entity manager.
     /// </summary>
     public EntityManager(
-        ClientManager clientManager,
+        IClientGroupProvider clientGroupProvider,
         ILogger<EntityManager> logger)
     {
-        clientManager.OnClientDisconnected += RemoveClientEntities;
-        
         _logger = logger;
-        _clientManager = clientManager;
+        _clientGroupProvider = clientGroupProvider;
     }
     
     /// <summary>
@@ -53,11 +46,8 @@ public class EntityManager
     /// <param name="entity">The entity.</param>
     public void AddEntity(BaseEntity entity)
     {
-        lock (_entityLock)
-        {
-            _entities.Add(entity);
-            entity.OnAttached();
-        }
+        _entities.Add(entity);
+        entity.OnAttached();
     }
 
     /// <summary>
@@ -69,10 +59,7 @@ public class EntityManager
     public TEntity? GetEntityById<TEntity>(int id)
         where TEntity : BaseEntity
     {
-        lock (_entityLock)
-        {
-            return _entities.FirstOrDefault(e => e.Id == id) as TEntity;
-        }
+        return _entities.FirstOrDefault(e => e.Id == id) as TEntity;
     }
 
     /// <summary>
@@ -82,10 +69,7 @@ public class EntityManager
     /// <returns>The entity if it is found.</returns>
     public TEntity? GetEntityOfType<TEntity>()
     {
-        lock (_entityLock)
-        {
-            return _entities.OfType<TEntity>().FirstOrDefault();
-        }
+        return _entities.OfType<TEntity>().FirstOrDefault();
     }
 
     /// <summary>
@@ -98,12 +82,9 @@ public class EntityManager
         where TEntity : BaseEntity
 
     {
-        lock (_entityLock)
-        {
-            return _entities.Where(e => e.Name == name)
-                .Cast<TEntity>()
-                .ToArray();
-        }
+        return _entities.Where(e => e.Name == name)
+            .Cast<TEntity>()
+            .ToArray();
     }
 
     /// <summary>
@@ -117,7 +98,7 @@ public class EntityManager
         var entityData = entity.GetEntityDataForSerialization();
         var serializedEntityData = JsonSerializer.Serialize(entityData);
         
-        foreach (var client in _clientManager.Clients)
+        foreach (var client in _clientGroupProvider.Clients)
         {
             var isOwner = entity.Owner?.Id == client.Id;
             var packet = new CreateEntityPacket
@@ -144,27 +125,24 @@ public class EntityManager
     public async Task SpawnMissingEntitiesFor(Client client)
     {
         var packetList = new List<CreateEntityPacket>();
-        lock (_entityLock)
+        foreach (var entity in _entities)
         {
-            foreach (var entity in _entities)
+            if (entity.IsAuthored)
+                continue;
+            
+            var entityData = entity.GetEntityDataForSerialization();
+            var serializedEntityData = JsonSerializer.Serialize(entityData);
+            var isOwner = entity.Owner?.Id == client.Id;
+            packetList.Add(new CreateEntityPacket
             {
-                if (entity.IsAuthored)
-                    continue;
-                
-                var entityData = entity.GetEntityDataForSerialization();
-                var serializedEntityData = JsonSerializer.Serialize(entityData);
-                var isOwner = entity.Owner?.Id == client.Id;
-                packetList.Add(new CreateEntityPacket
-                {
-                    Id = entity.Id,
-                    EntityName = entity.Type,
-                    Position = entity.Transform.Position,
-                    Rotation = entity.Transform.Rotation,
-                    Scale = entity.Transform.Scale,
-                    IsOwner = isOwner,
-                    JsonEntityData = serializedEntityData
-                });
-            }
+                Id = entity.Id,
+                EntityName = entity.Type,
+                Position = entity.Transform.Position,
+                Rotation = entity.Transform.Rotation,
+                Scale = entity.Transform.Scale,
+                IsOwner = isOwner,
+                JsonEntityData = serializedEntityData
+            });
         }
 
         // NOTE: We need to do it this way, as we cannot await inside of locks.
@@ -181,10 +159,7 @@ public class EntityManager
     /// <param name="entity">The entity.</param>
     public void RemoveEntity(BaseEntity entity)
     {
-        lock (_entityLock)
-        {
-            _entities.Remove(entity);
-        }
+        _entities.Remove(entity);
     }
 
     /// <summary>
@@ -199,24 +174,18 @@ public class EntityManager
         {
             Id = entity.Id
         };
-        
-        foreach (var client in _clientManager.Clients)
-        {
-            await client.SendData(packet);
-        }
+
+        await _clientGroupProvider.SendToClients(packet);
     }
 
     /// <summary>
     /// Removes all client-owned entities.
     /// </summary>
     /// <param name="client">The entities.</param>
-    private async Task RemoveClientEntities(Client client)
+    public async Task RemoveClientEntities(Client client)
     {
         var entsToRemove = new List<BaseEntity>();
-        lock (_entities)
-        {
-            entsToRemove.AddRange(_entities.Where(entity => entity.Owner?.Id == client.Id));
-        }
+        entsToRemove.AddRange(_entities.Where(entity => entity.Owner?.Id == client.Id));
 
         foreach (var entity in entsToRemove)
         {

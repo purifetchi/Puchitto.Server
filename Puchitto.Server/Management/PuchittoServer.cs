@@ -112,15 +112,16 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         EntityFactory = new EntityFactory(this);
         _rules.RegisterEntities(EntityFactory);
 
-        ClientManager = new ClientManager(
-            _rules,
-            _packetDispatcher,
-            MakeLogger<ClientManager>()
-        );
-
         RealmManager = new RealmManager(
             this,
             _rules
+        );
+        
+        ClientManager = new ClientManager(
+            _rules,
+            _packetDispatcher,
+            RealmManager,
+            MakeLogger<ClientManager>()
         );
 
         RegisterInternalHandlers();
@@ -190,7 +191,9 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// <param name="client">The client sending it.</param>
     private async Task OnJoin(JoinPacket packet, Client client)
     {
-        _logger.LogInformation("Client {Id} sent us a join packet!", client.Id);
+        _logger.LogInformation("Client {Id} sent us a join packet for realm {Realm}!",
+            client.Id,
+            packet.Link.ToUriString());
         await RealmManager.TransferClient(client, packet.Link);
     }
     

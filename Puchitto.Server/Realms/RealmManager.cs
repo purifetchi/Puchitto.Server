@@ -81,9 +81,10 @@ public class RealmManager
         }
 
         var destination = await GetOrLoadRealm(link.RealmName);
-
-        // TODO: Realms should have a player limit. Every player should create a registration within the realm
-        //       that tracks whether they can join.
+        if (!destination.TryReserveSlot(client))
+        {
+            return;
+        }
         
         // If we have no current realm, we can admit to the new realm already. 
         if (source == null)
