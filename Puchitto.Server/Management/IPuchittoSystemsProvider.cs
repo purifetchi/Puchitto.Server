@@ -37,6 +37,11 @@ public interface IPuchittoSystemsProvider
     /// The logger factory.
     /// </summary>
     ILoggerFactory LoggerFactory { get; }
+    
+    /// <summary>
+    /// The realm registry.
+    /// </summary>
+    IRealmRegistry RealmRegistry { get; }
 
     /// <summary>
     /// Makes the child environment from the base environment.

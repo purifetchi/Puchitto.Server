@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
+using Puchitto.Server.Management.Builder;
 using Puchitto.Server.Networking;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Engine.Bidirectional;
@@ -16,9 +17,7 @@ namespace Puchitto.Server.Management;
 /// <summary>
 /// The Puchitto server instance.
 /// </summary>
-/// <typeparam name="TGameServerRules">The type of the game server rules.</typeparam>
-public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
-    where TGameServerRules : IGameServerRules, new()
+public class PuchittoServer : IPuchittoSystemsProvider
 {
     /// <summary>
     /// The entity manager.
@@ -41,6 +40,11 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     public EntityFactory EntityFactory { get; }
     
     /// <summary>
+    /// The realm registry.
+    /// </summary>
+    public IRealmRegistry RealmRegistry { get; }
+    
+    /// <summary>
     /// The logger factory.
     /// </summary>
     public ILoggerFactory LoggerFactory { get; private set; }
@@ -53,7 +57,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// <summary>
     /// The logger for this server.
     /// </summary>
-    private readonly ILogger<PuchittoServer<TGameServerRules>> _logger;
+    private readonly ILogger<PuchittoServer> _logger;
 
     /// <summary>
     /// The web socket listener.
@@ -68,52 +72,57 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// <summary>
     /// The game server rules.
     /// </summary>
-    private readonly TGameServerRules _rules;
+    private readonly IGameServerRules _rules;
 
     /// <summary>
     /// The base miniantics environment.
     /// </summary>
     private readonly MiniAnticsEnvironment _miniAnticsEnvironment;
+
+    /// <summary>
+    /// Creates a server builder.
+    /// </summary>
+    /// <returns>The puchitto server builder.</returns>
+    public static IRulesBuilderStep CreateBuilder()
+    {
+        return new PuchittoServerBuilder();
+    }
     
     /// <summary>
     /// Constructs a new Puchitto server.
     /// </summary>
-    /// <param name="config">The server config.</param>
-    public PuchittoServer(PuchittoServerConfig config)
+    internal PuchittoServer(
+        string[] listenUrls,
+        PuchittoServerConfig config,
+        IGameServerRules rules,
+        PacketRegistry registry,
+        EntityFactory entityFactory,
+        IRealmRegistry realmRegistry,
+        ILoggerFactory loggerFactory)
     {
         _config = config;
-        _miniAnticsEnvironment = new();
-        _rules = new TGameServerRules
-        {
-            PuchittoSystemsProvider = this
-        };
-
-        var loggingBuilder = config.LoggingBuilder ?? (opts =>
-        {
-            opts.AddProvider(NullLoggerProvider.Instance);
-        });
+        _rules = rules;
         
-        LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(loggingBuilder);
-        _logger = LoggerFactory.CreateLogger<PuchittoServer<TGameServerRules>>();
+        Registry = registry;
+        EntityFactory = entityFactory;
+        RealmRegistry  = realmRegistry;
+        LoggerFactory = loggerFactory;
 
-        Registry = new PacketRegistry();
+        _miniAnticsEnvironment = new();
+
+        _logger = LoggerFactory.CreateLogger<PuchittoServer>();
+
         _packetDispatcher = new PacketDispatcher(
             Registry,
             LoggerFactory.CreateLogger<PacketDispatcher>()
         );
         
         _webSocketListener = new WebSocketListener(
-            _config.Prefixes,
+            listenUrls,
             LoggerFactory.CreateLogger<WebSocketListener>()
         );
 
-        EntityFactory = new EntityFactory(this);
-        _rules.RegisterEntities(EntityFactory);
-
-        RealmManager = new RealmManager(
-            this,
-            _rules
-        );
+        RealmManager = new RealmManager(this);
         
         ClientManager = new ClientManager(
             _rules,
@@ -131,8 +140,6 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// </summary>
     public async Task Host(CancellationToken cancellationToken = default)
     {
-        _rules.OnReady();
-        
         await RealmManager.LoadRealms();
         
         _webSocketListener.OnClientConnected =
@@ -167,8 +174,6 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         Registry.RegisterHandler<KeepAlivePacket>(OnKeepAlive);
         Registry.RegisterRealmHandler<LoadStatePacket>(OnLoadState);
         Registry.RegisterRealmHandler<MiniAnticsRpcPacket>(OnMiniAnticsRpc);
-        
-        _rules.RegisterPackets(Registry);
     }
 
     /// <summary>

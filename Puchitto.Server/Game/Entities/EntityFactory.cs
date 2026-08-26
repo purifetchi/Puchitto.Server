@@ -20,15 +20,8 @@ public class EntityFactory
         BaseEntity Build();
     }
     
-    private readonly IPuchittoSystemsProvider _systemsProvider;
-
     private readonly Dictionary<string, IFactoryDefinition> _factories = new();
 
-    public EntityFactory(IPuchittoSystemsProvider systemsProvider)
-    {
-        _systemsProvider = systemsProvider;
-    }
-    
     public void RegisterEntity<TEntity>(string name)
         where TEntity : BaseEntity, new()
     {

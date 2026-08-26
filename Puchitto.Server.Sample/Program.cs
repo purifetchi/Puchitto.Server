@@ -2,14 +2,13 @@
 using Puchitto.Server.Management;
 using Puchitto.Server.Sample;
 
-var config = new PuchittoServerConfig
-{
-    Prefixes = ["http://localhost:8080/"],
-    LoggingBuilder = (opts) =>
+var server = PuchittoServer.CreateBuilder()
+    .UseRules<SampleGameServerRules>()
+    .Listen("http://localhost:8080/")
+    .ConfigureLogging(opts =>
     {
         opts.AddConsole();
-    }
-};
+    })
+    .Build();
 
-var server = new PuchittoServer<SampleGameServerRules>(config);
 await server.Host();

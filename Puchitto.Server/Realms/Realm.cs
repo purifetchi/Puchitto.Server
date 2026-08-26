@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Numerics;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
@@ -193,6 +194,52 @@ public class Realm : IClientGroupProvider
     {
         var entity = EntityManager.Entities;
         return entity.FirstOrDefault(e => e is TEntity && e.Owner == client) as TEntity;
+    }
+
+    /// <summary>
+    /// Creates an entity, but doesn't spawn it into the realm.
+    /// </summary>
+    /// <param name="position">The position to spawn at.</param>
+    /// <param name="rotation">The rotation to spawn at.</param>
+    /// <param name="owner">The owner of the entity.</param>
+    /// <typeparam name="TEntity">The type of the entity.</typeparam>
+    /// <returns>The entity.</returns>
+    public TEntity CreateEntity<TEntity>(
+        Vector3? position = null,
+        Quaternion? rotation = null,
+        Client? owner = null)
+        where TEntity : BaseEntity, new()
+    {
+        var entity = SystemsProvider.EntityFactory.CreateEntity<TEntity>(this);
+        if (owner != null)
+        {
+            entity.Owner = owner;
+        }
+        
+        entity.Transform.Position = position ?? Vector3.Zero;
+        entity.Transform.Rotation = rotation ?? Quaternion.Identity;
+
+        return entity;
+    }
+
+    /// <summary>
+    /// Creates and spawns an entity into this realm.
+    /// </summary>
+    /// <param name="position">The position to spawn at.</param>
+    /// <param name="rotation">The rotation to spawn at.</param>
+    /// <param name="owner">The owner of the entity.</param>
+    /// <typeparam name="TEntity">The type of the entity.</typeparam>
+    /// <returns>The entity.</returns>
+    public async Task<TEntity> Spawn<TEntity>(
+        Vector3? position = null,
+        Quaternion? rotation = null,
+        Client? owner = null)
+        where TEntity : BaseEntity, new()
+    {
+        var entity = CreateEntity<TEntity>(position, rotation, owner);
+        await EntityManager.AddAndSpawnForEveryone(entity);
+        
+        return entity;
     }
 
     /// <summary>

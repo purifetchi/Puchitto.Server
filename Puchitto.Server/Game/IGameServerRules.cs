@@ -18,15 +18,11 @@ public interface IGameServerRules
     string Name { get; }
     
     /// <summary>
-    /// The systems provider.
+    /// Attaches the game server rules to this server.
     /// </summary>
-    IPuchittoSystemsProvider PuchittoSystemsProvider { get; set; }
+    /// <param name="server">The puchitto server.</param>
+    void Attach(PuchittoServer server);
     
-    /// <summary>
-    /// The realm registry for this game.
-    /// </summary>
-    IRealmRegistry RealmRegistry { get; }
-
     /// <summary>
     /// Called when the server is ready.
     /// </summary>
@@ -43,6 +39,12 @@ public interface IGameServerRules
     /// </summary>
     /// <param name="entityFactory">The entity factory.</param>
     void RegisterEntities(EntityFactory entityFactory);
+
+    /// <summary>
+    /// Configures the realms for this game server.
+    /// </summary>
+    /// <param name="realmRegistry">The realm registry.</param>
+    void ConfigureRealms(IRealmRegistry realmRegistry);
     
     /// <summary>
     /// Creates an entity for a client.

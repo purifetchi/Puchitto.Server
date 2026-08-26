@@ -11,29 +11,17 @@ public class SampleGameServerRules : AbstractGameServerRules
 {
     public override string Name => "DummyGame";
 
-    public override void OnReady()
-    {
-        RealmRegistry.AddRealm("flatland", new RealmDefinition("flatland", "flatland.alf", Flags: RealmFlags.Default));
-    }
-
     public override void RegisterPackets(PacketRegistry registry)
     {
-        registry.RegisterHandler<RequestWalkPacket>(OnRequestWalk);
+        registry.RegisterRealmHandler<RequestWalkPacket>(OnRequestWalk);
     }
 
-    private async Task OnRequestWalk(RequestWalkPacket packet, Client client)
+    private async Task OnRequestWalk(RequestWalkPacket packet, Realm realm, Client client)
     {
         // Find the entity for this player.
-        var entity = PuchittoSystemsProvider
-            .RealmManager
-            .Default
-            .EntityManager
-            .Entities
-            .FirstOrDefault(ent => ent.Owner?.Id == client.Id && ent is UnknownEntity);
-
+        var entity = realm.PlayerEntityOf<BaseEntity>(client);
         if (entity == null)
         {
-            // how
             return;
         }
 
@@ -44,23 +32,17 @@ public class SampleGameServerRules : AbstractGameServerRules
             Id = entity.Id,
             To = packet.To
         };
-        
-        foreach (var targetClient in PuchittoSystemsProvider.ClientManager.Clients)
-        {
-            if (targetClient == client)
-            {
-                continue;
-            }
 
-            await targetClient.SendData(movePacket);
-        }
+        await realm.SendToClients(movePacket, excluding: client);
+    }
+
+    public override void ConfigureRealms(IRealmRegistry realmRegistry)
+    {
+        realmRegistry.AddRealm("flatland", new RealmDefinition("flatland", "flatland.alf", Flags: RealmFlags.Default));
     }
 
     public override BaseEntity CreateEntityForClient(Realm realm, Client client)
     {
-        return new UnknownEntity
-        {
-            Id = PuchittoSystemsProvider.RealmManager.Default.IdAllocator.GetNextId()
-        };
+        return realm.CreateEntity<UnknownEntity>(owner: client);
     }
 }

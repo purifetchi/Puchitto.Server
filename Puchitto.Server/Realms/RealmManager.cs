@@ -22,18 +22,14 @@ public class RealmManager
     
     private readonly ConcurrentDictionary<string, RealmSlot> _realms = new();
     private readonly IPuchittoSystemsProvider _systemsProvider;
-    private readonly IGameServerRules _rules;
     
     /// <summary>
     /// Constructs a new realm manager.
     /// </summary>
     /// <param name="puchittoSystemsProvider"></param>
-    public RealmManager(
-        IPuchittoSystemsProvider puchittoSystemsProvider,
-        IGameServerRules rules)
+    public RealmManager(IPuchittoSystemsProvider puchittoSystemsProvider)
     {
         _systemsProvider = puchittoSystemsProvider;
-        _rules = rules;
     }
 
     /// <summary>
@@ -41,7 +37,7 @@ public class RealmManager
     /// </summary>
     public async Task LoadRealms()
     {
-        var defs = _rules.RealmRegistry.GetRealmDefinitions();
+        var defs = _systemsProvider.RealmRegistry.GetRealmDefinitions();
         var realmTasks = defs
             .Where(d => d.Flags.HasFlag(RealmFlags.Persistent))
             .Select(BeginRealmLoad);

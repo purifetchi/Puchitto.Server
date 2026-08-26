@@ -1,18 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
+﻿namespace Puchitto.Server.Management;
 
-namespace Puchitto.Server.Management;
-
+/// <summary>
+/// The configuration for a puchitto server.
+/// </summary>
 public class PuchittoServerConfig
 {
     /// <summary>
-    /// The list of prefixes the Puchitto server will be listening on.
+    /// How often do realms tick?
     /// </summary>
-    public required string[] Prefixes { get; set; }
+    public int RealmTicksPerSecond { get; set; } = 20;
     
     /// <summary>
-    /// The logger configuration.
+    /// The amount of people one realm can fit. Null means infinite.
     /// </summary>
-    public Action<ILoggingBuilder>? LoggingBuilder { get; set; }
-    
-    // TODO: SSL
+    public int? RealmOccupancyLimit { get; set; }
 }
