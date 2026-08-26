@@ -8,7 +8,7 @@ namespace Puchitto.Server.Packets.Engine.Bidirectional;
 public struct KeepAlivePacket() : IPuchittoPacket
 {
     /// <inheritdoc />
-    public int PacketId { get; } = (int)InternalPacketTypes.KeepAlive;
+    public static int PacketId { get; } = (int)InternalPacketTypes.KeepAlive;
     
     /// <inheritdoc />
     public void Serialize(ref NetworkWriter writer)

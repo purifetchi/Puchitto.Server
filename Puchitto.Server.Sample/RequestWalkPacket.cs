@@ -6,7 +6,7 @@ namespace Puchitto.Server.Sample;
 
 public struct RequestWalkPacket() : IPuchittoPacket
 {
-    public int PacketId { get; } = 100;
+    public static int PacketId { get; } = 100;
     
     public Vector3 To { get; set; }
     

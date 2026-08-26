@@ -147,7 +147,7 @@ public abstract class BaseEntity
                 Name = name,
                 ObjectId = Id
             };
-            var writer = client.BeginDataSend(miniAnticsRpcPacket.PacketId);
+            var writer = client.BeginDataSend(MiniAnticsRpcPacket.PacketId);
             miniAnticsRpcPacket.Serialize(writer);
 
             return writer;

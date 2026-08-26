@@ -9,7 +9,7 @@ namespace Puchitto.Server.Packets;
 /// </summary>
 /// <typeparam name="TPacket">The type of the packet.</typeparam>
 public class RealmPacketHandler<TPacket> : IPacketHandler
-    where TPacket : IPuchittoPacket, new()
+    where TPacket : struct, IPuchittoPacket
 {
     /// <inheritdoc />
     public PacketDispatchType DispatchType => PacketDispatchType.Realm;

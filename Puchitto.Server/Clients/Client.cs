@@ -79,7 +79,7 @@ public class Client
         var buffer = RentBuffer();
         
         var writer = new NetworkWriter(buffer, 0);
-        WriteEnvelope(data.PacketId, ref writer);
+        WriteEnvelope(TPacket.PacketId, ref writer);
         data.Serialize(ref writer);
 
         await AdjustPacketLengthAndSend(

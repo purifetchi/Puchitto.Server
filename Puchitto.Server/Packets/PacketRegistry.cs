@@ -16,15 +16,14 @@ public class PacketRegistry
     /// <param name="handler">The handler.</param>
     /// <typeparam name="TPacket">The type of the packet.</typeparam>
     public void RegisterHandler<TPacket>(Func<TPacket, Client, Task> handler)
-        where TPacket : IPuchittoPacket, new()
+        where TPacket : struct, IPuchittoPacket
     {
         var packetHandler = new SimplePacketHandler<TPacket>()
         {
             Handler = handler
         };
         
-        var dummy = new TPacket();
-        _handlers.Add(dummy.PacketId, packetHandler); 
+        _handlers.Add(TPacket.PacketId, packetHandler); 
     }
 
     /// <summary>
@@ -37,15 +36,14 @@ public class PacketRegistry
     /// The type of the packet.
     /// </typeparam>
     public void RegisterRealmHandler<TPacket>(Func<TPacket, Realm, Client, Task> handler)
-        where TPacket : IPuchittoPacket, new()
+        where TPacket : struct, IPuchittoPacket
     {
         var packetHandler = new RealmPacketHandler<TPacket>()
         {
             Handler = handler
         };
         
-        var dummy = new TPacket();
-        _handlers.Add(dummy.PacketId, packetHandler);
+        _handlers.Add(TPacket.PacketId, packetHandler);
     }
 
     /// <summary>

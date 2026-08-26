@@ -10,7 +10,7 @@ namespace Puchitto.Server.Packets;
 /// The type of the packet.
 /// </typeparam>
 public class SimplePacketHandler<TPacket> : IPacketHandler
-    where TPacket : IPuchittoPacket, new()
+    where TPacket : struct, IPuchittoPacket
 {
     /// <inheritdoc />
     public PacketDispatchType DispatchType => PacketDispatchType.Server;

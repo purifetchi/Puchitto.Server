@@ -5,7 +5,7 @@ namespace Puchitto.Server.Packets.Engine.Serverbound;
 
 public struct LoadStatePacket() : IPuchittoPacket
 {
-    public int PacketId => (int)InternalPacketTypes.LoadStateUpdate;
+    public static int PacketId => (int)InternalPacketTypes.LoadStateUpdate;
 
     public LoadState State { get; set; } = LoadState.Started;
 

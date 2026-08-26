@@ -8,7 +8,7 @@ namespace Puchitto.Server.Packets.Engine.Serverbound;
 /// </summary>
 public struct JoinPacket : IPuchittoPacket
 {
-    public int PacketId => (int)InternalPacketTypes.Join;
+    public static int PacketId => (int)InternalPacketTypes.Join;
     
     public RealmLink Link { get; set; }
 

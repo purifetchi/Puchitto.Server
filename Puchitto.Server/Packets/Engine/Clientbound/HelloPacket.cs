@@ -9,7 +9,7 @@ namespace Puchitto.Server.Packets.Engine.Clientbound;
 public struct HelloPacket(string branding, string gameRulesName, RealmLink link) : IPuchittoPacket
 {
     /// <inheritdoc />
-    public int PacketId => (int)InternalPacketTypes.Hello;
+    public static int PacketId => (int)InternalPacketTypes.Hello;
 
     /// <summary>
     /// The identification message.

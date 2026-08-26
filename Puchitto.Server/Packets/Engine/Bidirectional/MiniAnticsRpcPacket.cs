@@ -9,7 +9,7 @@ namespace Puchitto.Server.Packets.Engine.Bidirectional;
 public struct MiniAnticsRpcPacket : IPuchittoPacket
 {
     /// <inheritdoc />
-    public int PacketId => (int)InternalPacketTypes.MiniAnticsRpc;
+    public static int PacketId => (int)InternalPacketTypes.MiniAnticsRpc;
     
     /// <summary>
     /// The ID of the object where the MiniAntics RPC is being invoked.

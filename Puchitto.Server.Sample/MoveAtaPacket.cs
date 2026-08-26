@@ -6,7 +6,7 @@ namespace Puchitto.Server.Sample;
 
 public struct MoveAtaPacket() : IPuchittoPacket
 {
-    public int PacketId { get; } = 101;
+    public static int PacketId { get; } = 101;
 
     public int Id { get; set; }
     
