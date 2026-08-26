@@ -175,6 +175,11 @@ public class ClientManager
         {
             await OnClientDisconnected.Invoke(client);
         }
+        
+        client.CurrentRealm?.DispatchOnRealmThread(async realm =>
+        {
+            await realm.RemoveClient(client);
+        });
 
         await _clientSemaphore.WaitAsync();
         _clients.Remove(client);

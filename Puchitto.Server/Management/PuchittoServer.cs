@@ -205,9 +205,12 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// <param name="client">The client sending it.</param>
     private async Task OnLoadState(LoadStatePacket packet, Realm realm, Client client)
     {
-        var newState = packet.State is LoadState.Started
-            ? ClientState.Loading
-            : ClientState.Loaded;
+        var newState = packet.State switch
+        {
+            LoadState.Started => ClientState.Loading,
+            LoadState.Loaded => ClientState.Loaded,
+            _ => throw new InvalidOperationException($"Client {client.Id} sent us an invalid loading state packet.")
+        };
         
         client.SetState(newState);
         _logger.LogInformation("Client {ClientName} is now in state {State} for realm {RealmName}",
