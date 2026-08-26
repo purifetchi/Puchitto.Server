@@ -75,11 +75,6 @@ public abstract class BaseEntity
     /// </summary>
     private List<ObjectAntics> _antics = new();
 
-    /// <summary>
-    /// Locks the environment while an RPC runs.
-    /// </summary>
-    private Lock _rpcLock = new();
-    
     public void Initialize(Realm realm)
     {
         OwningRealm = realm;
