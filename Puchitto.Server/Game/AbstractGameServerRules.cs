@@ -12,8 +12,6 @@ public abstract class AbstractGameServerRules : IGameServerRules
 
     public IPuchittoSystemsProvider PuchittoSystemsProvider { get; set; } = null!;
 
-    public IRealmRegistry RealmRegistry { get; set; } = new RealmRegistry();
-
     public virtual void Attach(PuchittoServer server)
     {
         PuchittoSystemsProvider = server;
