@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
@@ -92,7 +93,12 @@ public class Realm : IClientGroupProvider
     /// <summary>
     /// The list of clients currently connected to the realm.
     /// </summary>
-    private List<Client> _clients = new();
+    private readonly List<Client> _clients = new();
+
+    /// <summary>
+    /// The logger for this realm.
+    /// </summary>
+    private readonly ILogger _logger;
     
     /// <summary>
     /// Constructs a new Realm.
@@ -106,11 +112,12 @@ public class Realm : IClientGroupProvider
         RealmDefinition definition)
     {
         _definition = definition;
+        _logger = puchittoSystemsProvider.LoggerFactory.CreateLogger($"Realm ({definition.Name})");
         
         SystemsProvider = puchittoSystemsProvider;
         EntityManager = new EntityManager(
             this,
-            puchittoSystemsProvider.MakeLogger<EntityManager>());
+            puchittoSystemsProvider.LoggerFactory.CreateLogger<EntityManager>());
 
         _threadExecutorChannel = Channel.CreateUnbounded<RealmThreadActionCallback>();
         _clientMessageChannel = Channel.CreateBounded<RealmClientMessage>(new BoundedChannelOptions(1024)
@@ -214,13 +221,29 @@ public class Realm : IClientGroupProvider
         // Drain the thread executor channel.
         while (_threadExecutorChannel.Reader.TryRead(out var action))
         {
-            await action(this);
+            try
+            {
+                await action(this);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to execute dispatched task on realm.");
+            }
         }
 
         // Handle all the incoming client messages.
         while (_clientMessageChannel.Reader.TryRead(out var message))
         {
-            await SystemsProvider.Registry.ExecuteHandler(message.OpCode, message.Payload, message.Client);
+            try
+            {
+                await SystemsProvider.Registry.ExecuteHandler(message.OpCode, message.Payload, message.Client);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to execute packet with opcode {OpCode} from client {ClientName}.",
+                    message.OpCode, message.Client.Id);
+            }
+            
             ArrayPool<byte>.Shared.Return(message.Payload);
         }
         

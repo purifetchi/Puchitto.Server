@@ -34,11 +34,9 @@ public interface IPuchittoSystemsProvider
     EntityFactory EntityFactory { get; }
 
     /// <summary>
-    /// Constructs a logger for a given type.
+    /// The logger factory.
     /// </summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <returns>The created logger.</returns>
-    ILogger<T> MakeLogger<T>();
+    ILoggerFactory LoggerFactory { get; }
 
     /// <summary>
     /// Makes the child environment from the base environment.

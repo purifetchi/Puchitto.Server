@@ -3,11 +3,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game;
 using Puchitto.Server.Game.Entities;
-using Puchitto.Server.Game.Entities.Scripting;
 using Puchitto.Server.Networking;
 using Puchitto.Server.Packets;
 using Puchitto.Server.Packets.Engine.Bidirectional;
-using Puchitto.Server.Packets.Engine.Clientbound;
 using Puchitto.Server.Packets.Engine.Serverbound;
 using Puchitto.Server.Packets.Serialization.Facades;
 using Puchitto.Server.Realms;
@@ -41,16 +39,16 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
     /// The entity factory.
     /// </summary>
     public EntityFactory EntityFactory { get; }
+    
+    /// <summary>
+    /// The logger factory.
+    /// </summary>
+    public ILoggerFactory LoggerFactory { get; private set; }
 
     /// <summary>
     /// The current config.
     /// </summary>
     private readonly PuchittoServerConfig _config;
-
-    /// <summary>
-    /// Creates a new logger factory.
-    /// </summary>
-    private readonly ILoggerFactory _loggerFactory;
     
     /// <summary>
     /// The logger for this server.
@@ -95,18 +93,18 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             opts.AddProvider(NullLoggerProvider.Instance);
         });
         
-        _loggerFactory = LoggerFactory.Create(loggingBuilder);
-        _logger = MakeLogger<PuchittoServer<TGameServerRules>>();
+        LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(loggingBuilder);
+        _logger = LoggerFactory.CreateLogger<PuchittoServer<TGameServerRules>>();
 
         Registry = new PacketRegistry();
         _packetDispatcher = new PacketDispatcher(
             Registry,
-            MakeLogger<PacketDispatcher>()
+            LoggerFactory.CreateLogger<PacketDispatcher>()
         );
         
         _webSocketListener = new WebSocketListener(
             _config.Prefixes,
-            MakeLogger<WebSocketListener>()
+            LoggerFactory.CreateLogger<WebSocketListener>()
         );
 
         EntityFactory = new EntityFactory(this);
@@ -121,7 +119,7 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
             _rules,
             _packetDispatcher,
             RealmManager,
-            MakeLogger<ClientManager>()
+            LoggerFactory.CreateLogger<ClientManager>()
         );
 
         RegisterInternalHandlers();
@@ -243,12 +241,6 @@ public class PuchittoServer<TGameServerRules> : IPuchittoSystemsProvider
         entity?.HandleRpc(packet.Name, client);
     }
     
-    /// <inheritdoc />
-    public ILogger<T> MakeLogger<T>()
-    {
-        return _loggerFactory.CreateLogger<T>();
-    }
-
     /// <summary>
     /// Constructs a new child environment.
     /// </summary>

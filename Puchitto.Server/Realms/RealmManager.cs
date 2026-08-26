@@ -52,7 +52,7 @@ public class RealmManager
             .Value
             .Realm;
         
-        var logger = _systemsProvider.MakeLogger<RealmManager>();
+        var logger = _systemsProvider.LoggerFactory.CreateLogger<RealmManager>();
         logger.LogInformation("Loaded {Count} realm(s).", _realms.Count);
     }
 
