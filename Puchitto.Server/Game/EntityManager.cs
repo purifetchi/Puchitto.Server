@@ -2,7 +2,6 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Game.Entities;
-using Puchitto.Server.Game.Entities.Scripting;
 using Puchitto.Server.Packets.Engine.Clientbound;
 
 namespace Puchitto.Server.Game;
@@ -82,9 +81,11 @@ public class EntityManager
         where TEntity : BaseEntity
 
     {
-        return _entities.Where(e => e.Name == name)
-            .Cast<TEntity>()
-            .ToArray();
+        return
+        [
+            .. _entities.Where(e => e.Name == name)
+                .Cast<TEntity>()
+        ];
     }
 
     /// <summary>
@@ -100,6 +101,11 @@ public class EntityManager
         
         foreach (var client in _clientGroupProvider.Clients)
         {
+            if (client.State is not ClientState.Present)
+            {
+                continue;
+            }
+            
             var isOwner = entity.Owner?.Id == client.Id;
             var packet = new CreateEntityPacket
             {

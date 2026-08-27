@@ -1,10 +1,9 @@
 using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Puchitto.Server.Clients;
 using Puchitto.Server.Data.Alf;
-using Puchitto.Server.Game;
 using Puchitto.Server.Management;
 using Puchitto.Server.Realms.Definitions;
 
@@ -20,8 +19,10 @@ public class RealmManager
     /// </summary>
     public Realm Default { get; private set; } = null!;
     
-    private readonly ConcurrentDictionary<string, RealmSlot> _realms = new();
+    private readonly ConcurrentDictionary<string, RealmSlot> _realmSlots = new();
     private readonly IPuchittoSystemsProvider _systemsProvider;
+    
+    private readonly ILogger<RealmManager> _logger;
     
     /// <summary>
     /// Constructs a new realm manager.
@@ -30,6 +31,7 @@ public class RealmManager
     public RealmManager(IPuchittoSystemsProvider puchittoSystemsProvider)
     {
         _systemsProvider = puchittoSystemsProvider;
+        _logger = _systemsProvider.LoggerFactory.CreateLogger<RealmManager>();
     }
 
     /// <summary>
@@ -40,16 +42,17 @@ public class RealmManager
         var defs = _systemsProvider.RealmRegistry.GetRealmDefinitions();
         var realmTasks = defs
             .Where(d => d.Flags.HasFlag(RealmFlags.Persistent))
-            .Select(BeginRealmLoad);
+            .Select(d => d.Name)
+            .Select(GetOrLoadRealm)
+            .ToList();
         
         await Task.WhenAll(realmTasks);
 
-        Default = _realms.First(r => r.Value.Realm.Flags.HasFlag(RealmFlags.Default))
-            .Value
-            .Realm;
+        Default = realmTasks
+            .Select(t => t.GetAwaiter().GetResult())
+            .First(t => t.Flags == RealmFlags.Default);
         
-        var logger = _systemsProvider.LoggerFactory.CreateLogger<RealmManager>();
-        logger.LogInformation("Loaded {Count} realm(s).", _realms.Count);
+        _logger.LogInformation("Loaded {Count} realm(s).", _realmSlots.Count);
     }
 
     /// <summary>
@@ -59,8 +62,43 @@ public class RealmManager
     /// <returns>The realm itself.</returns>
     public async Task<Realm> GetOrLoadRealm(string name)
     {
-        // TODO: Check if we have this realm loaded.
-        return _realms.Values.First(r => r.Realm.Name == name).Realm;
+        // If we have a realm, return the loading task.
+        if (_realmSlots.TryGetValue(name, out var realmSlot))
+        {
+            try
+            {
+                return await realmSlot.RealmTask.Value;
+            }
+            catch
+            {
+                _realmSlots.TryRemove(name, out _);
+                throw;
+            }
+        }
+
+        var definition = _systemsProvider.RealmRegistry.GetDefinitionForRealm(name);
+        if (definition is null)
+        {
+            // TODO: Proper exception.
+            throw new InvalidOperationException();
+        }
+        
+        // Construct a new slot and try to add it.
+        var newSlot = _realmSlots.GetOrAdd(name, _ => new RealmSlot()
+        {
+            State = RealmState.Loading,
+            RealmTask = new Lazy<Task<Realm>>(() => BeginRealmLoad(definition))
+        });
+        
+        try
+        {
+            return await newSlot.RealmTask.Value;
+        }
+        catch
+        {
+            _realmSlots.TryRemove(name, out _);
+            throw;
+        }
     }
 
     /// <summary>
@@ -101,18 +139,37 @@ public class RealmManager
     /// Begins loading a singular realm.
     /// </summary>
     /// <param name="definition">The realm's definition</param>
-    private async Task BeginRealmLoad(RealmDefinition definition)
+    private async Task<Realm> BeginRealmLoad(RealmDefinition definition)
     {
+        var sw = new Stopwatch();
+        sw.Start();
+        
         var realm = await CreateRealm(definition);
         var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
-        _ = Task.Run(async () =>
+        var tickingTask = Task.Run(async () =>
         {
             await RealmTickLoop(realm, cancellationToken);
         }, cancellationToken);
+
+        if (!_realmSlots.TryGetValue(realm.Name, out var realmSlot))
+        {
+            // What had just transpired??
+            throw new InvalidOperationException("Realm loaded but has no realm slot? Huh?");
+        }
+
+        realmSlot.RealmTickingTask = tickingTask;
+        realmSlot.RealmTickCancellation = cts;
+        realmSlot.State = RealmState.Loaded;
         
-        _realms.TryAdd(definition.Name, new RealmSlot(RealmState.Loaded, realm, cts));
+        sw.Stop();
+        
+        _logger.LogInformation("Loaded realm {Name} in {Time} seconds.",
+            realm.Name,
+            sw.Elapsed.TotalSeconds);
+        
+        return realm;
     }
 
     /// <summary>
