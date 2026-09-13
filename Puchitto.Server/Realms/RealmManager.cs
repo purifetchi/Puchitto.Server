@@ -179,17 +179,65 @@ public class RealmManager
     /// <param name="cancellationToken">The cancellation token.</param>
     private async Task RealmTickLoop(Realm realm, CancellationToken cancellationToken)
     {
+        // TODO: Variable tick-rate. If a realm is not populated, it shouldn't tick nearly as often.
+        const float maxRealmIdleTimeInMinutes = 5;
         const float tps = 20.0f;
         const float delay = 1 / tps;
 
         var timeSpan = TimeSpan.FromSeconds(delay);
+        var idleTime = TimeSpan.FromMinutes(maxRealmIdleTimeInMinutes);
         while (!cancellationToken.IsCancellationRequested)
         {
             await realm.Tick();
             
+            if (realm.Clients.Count < 1)
+            {
+                var timeSinceLastEvent = DateTimeOffset.UtcNow - realm.LastClientEventTime;
+                if (timeSinceLastEvent >= idleTime &&
+                    !realm.Flags.HasFlag(RealmFlags.Persistent))
+                {
+                    break;
+                }
+            }
+            
             // TODO: This should be configurable.
             await Task.Delay(timeSpan, cancellationToken);
         }
+        
+        await ShutdownRealm(realm);
+    }
+
+    /// <summary>
+    /// Shuts down a realm.
+    /// </summary>
+    /// <param name="realm">The realm.</param>
+    private async Task ShutdownRealm(Realm realm)
+    {
+        if (!_realmSlots.TryGetValue(realm.Name, out var realmSlot) ||
+            realmSlot.State == RealmState.Unloading)
+        {
+            // Huh? Is this not managed by us?
+            return;
+        }
+        
+        _logger.LogInformation("Preparing to unload realm {Name}...", realm.Name);
+
+        realmSlot.State = RealmState.Unloading;
+        
+        // First, kick all the players out of this realm.
+        var players = realm.Clients.ToList();
+        foreach (var player in players)
+        {
+            await player.Disconnect();
+        }
+
+        if (realmSlot.RealmTickCancellation is not null)
+        {
+            await realmSlot.RealmTickCancellation.CancelAsync();
+        }
+        
+        var success = _realmSlots.TryRemove(realm.Name, out _);
+        _logger.LogInformation("Unloading realm {Name} resulted in state: {State}.", realm.Name, success ? "unloaded" : "failed");
     }
     
     /// <summary>

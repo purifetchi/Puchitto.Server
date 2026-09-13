@@ -57,6 +57,11 @@ public class Realm : IClientGroupProvider
     public IPuchittoSystemsProvider SystemsProvider { get; }
 
     /// <summary>
+    /// Gets the last client event emitted by this realm.
+    /// </summary>
+    public DateTimeOffset LastClientEventTime { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
     /// The delegate for when a client joins this realm.
     /// </summary>
     public delegate Task ClientJoinedRealmEvent(Client client);
@@ -166,6 +171,8 @@ public class Realm : IClientGroupProvider
     /// <returns>Whether we were able to reserve a slot.</returns>
     public bool TryReserveSlot(Client client)
     {
+        LastClientEventTime = DateTimeOffset.UtcNow;
+        
         // TODO: Realm slot limits.
         _clients.Add(client);
         return true;
@@ -349,6 +356,8 @@ public class Realm : IClientGroupProvider
     /// </param>
     public async Task RemoveClient(Client client)
     {
+        LastClientEventTime = DateTimeOffset.UtcNow;
+        
         _clients.Remove(client);
         await EntityManager.RemoveClientEntities(client);
         
