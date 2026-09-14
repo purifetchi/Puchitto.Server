@@ -19,6 +19,26 @@ public class RealmManager
     /// </summary>
     public Realm Default { get; private set; } = null!;
     
+    /// <summary>
+    /// The delegate for when a realm is loaded.
+    /// </summary>
+    public delegate Task RealmLoadedEvent(Realm realm);
+    
+    /// <summary>
+    /// The delegate for when a realm is unloaded.
+    /// </summary>
+    public delegate Task RealmUnloadedEvent(Realm realm);
+    
+    /// <summary>
+    /// Invoked when a realm is loaded.
+    /// </summary>
+    public event RealmLoadedEvent? OnRealmLoaded;
+    
+    /// <summary>
+    /// Invoked when a realm is unloaded.
+    /// </summary>
+    public event RealmUnloadedEvent? OnRealmUnloaded;
+    
     private readonly ConcurrentDictionary<string, RealmSlot> _realmSlots = new();
     private readonly IPuchittoSystemsProvider _systemsProvider;
     
@@ -168,6 +188,11 @@ public class RealmManager
         _logger.LogInformation("Loaded realm {Name} in {Time} seconds.",
             realm.Name,
             sw.Elapsed.TotalSeconds);
+
+        if (OnRealmLoaded != null)
+        {
+            await OnRealmLoaded(realm);
+        }
         
         return realm;
     }
@@ -238,6 +263,11 @@ public class RealmManager
         
         var success = _realmSlots.TryRemove(realm.Name, out _);
         _logger.LogInformation("Unloading realm {Name} resulted in state: {State}.", realm.Name, success ? "unloaded" : "failed");
+        
+        if (OnRealmUnloaded != null)
+        {
+            await OnRealmUnloaded(realm);
+        }
     }
     
     /// <summary>

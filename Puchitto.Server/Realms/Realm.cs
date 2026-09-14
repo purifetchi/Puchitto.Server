@@ -64,12 +64,12 @@ public class Realm : IClientGroupProvider
     /// <summary>
     /// The delegate for when a client joins this realm.
     /// </summary>
-    public delegate Task ClientJoinedRealmEvent(Client client);
+    public delegate Task ClientJoinedRealmEvent(Client client, Realm realm);
     
     /// <summary>
     /// The delegate for when a client leaves this realm.
     /// </summary>
-    public delegate Task ClientLeftRealmEvent(Client client);
+    public delegate Task ClientLeftRealmEvent(Client client, Realm realm);
     
     /// <summary>
     /// Invoked when a client joins this realm.
@@ -363,7 +363,7 @@ public class Realm : IClientGroupProvider
         
         if (OnClientLeftRealm is not null)
         {
-            await OnClientLeftRealm.Invoke(client);
+            await OnClientLeftRealm.Invoke(client, this);
         }
     }
     
@@ -386,7 +386,7 @@ public class Realm : IClientGroupProvider
 
         if (OnClientJoinedRealm is not null)
         {
-            await OnClientJoinedRealm.Invoke(client);
+            await OnClientJoinedRealm.Invoke(client, this);
         }
     }
 }
